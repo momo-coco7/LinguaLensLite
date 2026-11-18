@@ -1,0 +1,3694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LinguaLens</title>
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --card-bg: #f3efe6;
+      --accent: #da7756;
+      --accent-hover: #c86343;
+      --text-main: #382a25;
+      --text-muted: #73625a;
+      --border: #e5dec9;
+      --highlight-bg: #fcebe1;
+      --highlight-text: #b94b29;
+      --playing-bg: rgba(218, 119, 86, 0.08);
+      --tooltip-bg: #382a25;
+      --tooltip-text: #fcfbfa;
+      --tooltip-note: #fcebe1;
+      --trans-card-bg: #fcfbfa;
+      --output-font-size: 1.05rem;
+    }
+
+    body.dark-theme {
+      --bg: #1a1615;
+      --card-bg: #26211e;
+      --accent: #e07a5f;
+      --accent-hover: #f28f73;
+      --text-main: #ede6df;
+      --text-muted: #a8988e;
+      --border: #3d3530;
+      --highlight-bg: #3d271d;
+      --highlight-text: #f4a27e;
+      --playing-bg: rgba(224, 122, 95, 0.12);
+      --tooltip-bg: #ede6df;
+      --tooltip-text: #1a1615;
+      --tooltip-note: #4a2818;
+      --trans-card-bg: #201c1a;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.8;
+      margin: 0;
+      padding: 16px 10px 48px 10px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 18px 14px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(56, 42, 37, 0.03);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 6px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* BOTTOM FLOATING STATUS BAR */
+    .status-bar-container {
+      display: none;
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 900;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.78rem;
+      color: var(--text-main);
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      pointer-events: auto;
+      white-space: nowrap;
+      animation: fadeIn 0.2s ease;
+      transition: opacity 0.3s ease;
+    }
+
+    .status-bar-retry-btn {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: background-color 0.2s ease;
+    }
+    @media (hover: hover) {
+      .status-bar-retry-btn:hover { background: var(--accent-hover); }
+    }
+    .status-bar-retry-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .theme-toggle-btn, .vocab-open-btn, .history-open-btn, .sync-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 4px 7px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    @media (hover: hover) {
+      .theme-toggle-btn:hover, .vocab-open-btn:hover, .history-open-btn:hover, .sync-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      body.dark-theme .theme-toggle-btn:hover, body.dark-theme .vocab-open-btn:hover, 
+      body.dark-theme .history-open-btn:hover, body.dark-theme .sync-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 1.05rem; }
+      .container { padding: 14px 10px; }
+      .theme-toggle-btn, .vocab-open-btn, .history-open-btn, .sync-btn {
+        padding: 3px 6px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+      }
+      .vocab-text-label, .sync-text-label { display: none; }
+    }
+
+    .field { margin-bottom: 12px; }
+    .field-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .field label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .transcript-option-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: none !important;
+      letter-spacing: 0.02em;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .transcript-option-inline input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    input[type="text"].input-title-field, input[type="password"].input-title-field, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      background-color: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      color: var(--text-main);
+      font-family: inherit;
+    }
+    input[type="text"].input-title-field, input[type="password"].input-title-field { margin-bottom: 10px; }
+    textarea { padding: 10px 12px; resize: vertical; min-height: 100px; }
+    input[type="text"].input-title-field:focus, input[type="password"].input-title-field:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    button.primary-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background-color 0.2s ease;
+    }
+    @media (hover: hover) {
+      button.primary-btn:hover { background: var(--accent-hover); }
+    }
+    button.primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #output {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+      font-size: var(--output-font-size);
+      line-height: 1.9;
+    }
+
+    .article-header-container { margin-bottom: 18px; }
+    .article-title-text-box {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text-main);
+      line-height: 1.4;
+      word-break: break-word;
+      margin-bottom: 8px;
+    }
+
+    .article-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      flex-wrap: nowrap;
+    }
+
+    .article-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .article-pin-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    @media (hover: hover) {
+      .article-pin-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,0.03); }
+    }
+    .article-pin-btn.pinned { background: #f1c40f; border-color: #f1c40f; color: #382a25; }
+
+    .show-all-trans-btn, .chain-play-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 26px;
+      flex-shrink: 0;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    @media (hover: hover) {
+      .show-all-trans-btn:hover, .chain-play-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,0.03); }
+    }
+    .show-all-trans-btn.active, .chain-play-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .word-count-badge {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      height: 26px;
+      box-sizing: border-box;
+      flex-shrink: 1;
+      overflow: hidden;
+    }
+
+    .sentence-btn-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .sentence-play-btn, .sentence-trans-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    @media (hover: hover) {
+      .sentence-play-btn:hover, .sentence-trans-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(0, 0, 0, 0.05);
+      }
+      body.dark-theme .sentence-play-btn:hover, body.dark-theme .sentence-trans-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+    .sentence-trans-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .sentence-block {
+      margin-bottom: 8px;
+      display: block;
+      padding: 4px 6px;
+      border-radius: 8px;
+      transition: background-color 0.2s ease;
+    }
+    .sentence-block.playing-sentence {
+      background-color: var(--playing-bg);
+    }
+    .sentence-block.playing-sentence .sentence-play-btn {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .sentence-translation-card {
+      display: none;
+      margin: 6px 0 10px 0;
+      padding: 8px 12px;
+      background: var(--trans-card-bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      line-height: 1.55;
+      font-weight: normal;
+      animation: fadeIn 0.2s ease;
+    }
+    .sentence-translation-card.open { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .paragraph-block { margin-bottom: 24px; display: block; }
+    .paragraph-block:last-child { margin-bottom: 0; }
+
+    .back-to-top-container {
+      text-align: center;
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .section-retry-box {
+      background: rgba(185, 75, 41, 0.08);
+      border: 1px dashed #b94b29;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #b94b29;
+    }
+
+    .interactive-span {
+      position: relative;
+      display: inline;
+      cursor: pointer;
+      border-bottom: 1.5px dotted var(--accent);
+      padding: 1px 2px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+    @media (hover: hover) {
+      .interactive-span:hover { background-color: var(--highlight-bg); }
+    }
+    .interactive-span.active { background-color: var(--highlight-bg); color: var(--highlight-text); }
+
+    .popup-bubble {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--tooltip-bg);
+      color: var(--tooltip-text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 400;
+      white-space: normal;
+      width: max-content;
+      max-width: calc(100vw - 32px);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+      z-index: 100;
+      pointer-events: auto;
+      line-height: 1.45;
+      text-align: left;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .popup-bubble::before {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      height: 12px;
+      background: transparent;
+    }
+
+    .popup-phrase-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 3px;
+    }
+
+    .popup-phrase {
+      font-weight: 700;
+      font-size: 0.9rem;
+      flex: 1;
+      color: #ffffff;
+    }
+    body.dark-theme .popup-phrase { color: #1a1615; }
+
+    .popup-trans { font-weight: 500; font-size: 0.83rem; opacity: 0.9; }
+
+    .popup-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .popup-audio-btn, .popup-star-btn, .popup-sub-audio-btn, .popup-add-btn {
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: var(--tooltip-text);
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    @media (hover: hover) {
+      .popup-audio-btn:hover, .popup-star-btn:hover, .popup-sub-audio-btn:hover, .popup-add-btn:hover {
+        background: rgba(255, 255, 255, 0.35);
+        border-color: rgba(255, 255, 255, 0.5);
+        color: #ffffff;
+      }
+    }
+    .popup-star-btn.saved { background: #f1c40f; border-color: #f1c40f; color: #382a25; }
+    .popup-add-btn.added { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+
+    .popup-subitems-container {
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 6px;
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .popup-subitem-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.8rem;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .popup-subitem-main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .popup-subitem-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: normal;
+      color: #ffffff;
+    }
+    body.dark-theme .popup-subitem-title { color: #1a1615; }
+
+    .popup-subitem-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .text-pos {
+      opacity: 0.8;
+      font-size: 0.78rem;
+      font-style: normal;
+      font-weight: normal;
+    }
+
+    .cefr-badge {
+      font-size: 0.54rem;
+      font-weight: 600;
+      padding: 0px 3px;
+      border-radius: 3px;
+      display: inline-block;
+      background: #e6e0d3;
+      border: 1px solid #d5ccbd;
+      letter-spacing: 0.01em;
+      vertical-align: middle;
+      line-height: 1.2;
+    }
+    .popup-bubble .cefr-badge {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+    body.dark-theme .cefr-badge {
+      background: #332d29;
+      border: 1px solid #4d433e;
+    }
+
+    .cefr-a1 { color: #5a7a5e; } 
+    .cefr-a2 { color: #6e7a52; } 
+    .cefr-b1 { color: #9c7344; } 
+    .cefr-b2 { color: #a16453; } 
+    .cefr-c1 { color: #7e5a87; } 
+    .cefr-c2 { color: #995252; } 
+
+    .popup-bubble .cefr-a1 { color: #9bc79f; }
+    .popup-bubble .cefr-a2 { color: #b1c793; }
+    .popup-bubble .cefr-b1 { color: #e6b885; }
+    .popup-bubble .cefr-b2 { color: #e6a18f; }
+    .popup-bubble .cefr-c1 { color: #caa2d4; }
+    .popup-bubble .cefr-c2 { color: #e6a1a1; }
+
+    body.dark-theme .cefr-a1 { color: #8cb890; }
+    body.dark-theme .cefr-a2 { color: #a2b884; }
+    body.dark-theme .cefr-b1 { color: #d6ad7e; }
+    body.dark-theme .cefr-b2 { color: #d69888; }
+    body.dark-theme .cefr-c1 { color: #b892c4; }
+    body.dark-theme .cefr-c2 { color: #d69292; }
+
+    .popup-subitem-ipa {
+      font-style: normal;
+      font-weight: normal;
+      opacity: 0.85;
+      font-size: 0.75rem;
+    }
+
+    .popup-subitem-trans { font-size: 0.75rem; opacity: 0.85; margin-top: 1px; }
+    .popup-subitem-syn { font-size: 0.72rem; opacity: 0.8; font-style: italic; color: #fcebe1; margin-top: 1px; }
+
+    .popup-note-container {
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 6px;
+      margin-top: 6px;
+    }
+
+    .popup-note-content {
+      font-size: 0.78rem;
+      color: var(--tooltip-note);
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .popup-bubble::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: var(--arrow-left, 50%);
+      transform: translateX(-50%);
+      border-width: 6px;
+      border-style: solid;
+      border-color: var(--tooltip-bg) transparent transparent transparent;
+    }
+
+    .interactive-span.active .popup-bubble {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loading {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      padding: 16px;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--text-main); }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 1.3rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .modal-tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.03);
+    }
+    .modal-tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2.5px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .modal-tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: var(--card-bg);
+    }
+
+    .modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      flex-wrap: wrap;
+    }
+
+    .toast-msg {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      line-height: 1.4;
+      animation: fadeIn 0.2s ease;
+    }
+    .toast-msg.success {
+      background: rgba(46, 125, 50, 0.15);
+      color: #2e7d32;
+      border: 1px solid rgba(46, 125, 50, 0.3);
+    }
+    .toast-msg.error {
+      background: rgba(185, 75, 41, 0.15);
+      color: #b94b29;
+      border: 1px solid rgba(185, 75, 41, 0.3);
+    }
+    body.dark-theme .toast-msg.success {
+      background: rgba(129, 199, 132, 0.2);
+      color: #81c784;
+    }
+
+    .history-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    @media (hover: hover) {
+      .history-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    }
+    .history-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .history-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .history-title {
+      font-weight: 700;
+      font-size: 0.98rem;
+      color: var(--text-main);
+      line-height: 1.35;
+      flex: 1;
+    }
+    .history-card-preview {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .history-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border);
+    }
+    .history-badge { font-size: 0.78rem; font-weight: 600; color: var(--accent); }
+
+    /* VOCABULARY & HISTORY MODAL CARD STYLES */
+    .vocab-section-banner {
+      background: rgba(0, 0, 0, 0.04);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 5px 16px;
+      margin: 14px -16px 10px -16px;
+      letter-spacing: 0.03em;
+    }
+    body.dark-theme .vocab-section-banner {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .vocab-section-banner:first-child {
+      margin-top: -4px;
+      border-top: none;
+    }
+
+    .vocab-group-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .vocab-group-header {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed var(--border);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .vocab-item-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    body.dark-theme .vocab-item-row { border-bottom-color: rgba(255,255,255,0.06); }
+    .vocab-item-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .vocab-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .vocab-item-phrase { font-weight: 700; font-size: 1rem; color: var(--accent); word-break: break-word; }
+    .vocab-card-toolbar { display: flex; align-items: center; gap: 6px; }
+    .vocab-card-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    @media (hover: hover) {
+      .vocab-card-btn:hover { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+    }
+    .vocab-card-btn.pinned {
+      background: #f1c40f;
+      border-color: #f1c40f;
+      color: #382a25;
+    }
+
+    .vocab-detail-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+    .vocab-detail-phonetic { font-style: normal; }
+    .vocab-card-trans { font-weight: 600; font-size: 0.88rem; color: var(--text-main); line-height: 1.45; }
+
+    .vocab-card-def { font-weight: 600; font-size: 0.88rem; color: var(--text-main); line-height: 1.45; }
+    .vocab-card-syn { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+    .vocab-card-colloc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+
+    .vocab-anki-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .vocab-anki-en {
+      font-weight: 600;
+      font-size: 0.84rem;
+      color: var(--text-main);
+      word-break: break-word;
+      line-height: 1.45;
+    }
+    .vocab-anki-ja {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .vocab-anki-waiting {
+      font-size: 0.76rem;
+      font-style: italic;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .action-sm-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    @media (hover: hover) {
+      .action-sm-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
+    }
+    .action-sm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>LinguaLens</h1>
+    <div class="header-actions">
+      <button class="sync-btn" onclick="UI.openModal('directSyncModal')" title="Sync Data & Settings">🔄 <span class="sync-text-label">Sync</span></button>
+      <button class="history-open-btn" onclick="HistoryManager.openModal()" title="History">🕒 <span class="history-text-label">History</span></button>
+      <button class="vocab-open-btn" onclick="VocabManager.openModal()" title="Saved Vocabulary">📚 <span class="vocab-text-label">Saved </span>(<span id="vocabCount">0</span>)</button>
+      <button class="theme-toggle-btn" onclick="ThemeManager.toggle()" title="Toggle Theme"><span id="themeBtnText">🌙 Dark</span></button>
+    </div>
+  </div>
+
+  <div id="statusBar" class="status-bar-container">
+    <span id="statusBarText">⏳ Analyzing...</span>
+    <button id="statusBarRetryBtn" class="status-bar-retry-btn" style="display: none;">🔄 Retry All</button>
+  </div>
+
+  <div class="field">
+    <div class="field-header"><label for="inputTitle">Title (optional)</label></div>
+    <input type="text" id="inputTitle" class="input-title-field" placeholder="Leave empty for auto title (or skip for short text)...">
+
+    <div class="field-header">
+      <label for="inputText" id="inputTextLabel">Input Text (0 words)</label>
+      <label class="transcript-option-inline">
+        <input type="checkbox" id="transcriptModeCheckbox">
+        <span>Transcript Mode</span>
+      </label>
+    </div>
+
+    <textarea id="inputText" rows="5" placeholder="Paste your English text here..."></textarea>
+  </div>
+
+  <button id="convertBtn" class="primary-btn" onclick="App.handleGenerateAction()">Generate LinguaLens</button>
+  <div id="output"></div>
+</div>
+
+<div id="directSyncModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2>🔄 Data Sync & Settings</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('directSyncModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      
+      <!-- API KEY SETTINGS SECTION (1-row layout) -->
+      <div style="margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+        <label for="apiKeyInput" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); display: block; margin-bottom: 4px;">🔑 Gemini API Key</label>
+        <div style="display: flex; gap: 6px;">
+          <input type="password" id="apiKeyInput" class="input-title-field" placeholder="Enter API key (AIzaSy...)" style="margin-bottom: 0; flex: 1; padding: 6px 10px; font-size: 0.9rem;">
+          <button class="action-sm-btn" onclick="SyncManager.saveApiKey()" style="background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 600; padding: 0 10px; white-space: nowrap;">💾 Save</button>
+          <button class="action-sm-btn" onclick="SyncManager.clearApiKey()" style="color: #b94b29; border-color: var(--border); font-weight: 600; padding: 0 8px; white-space: nowrap;">🗑️ Clear</button>
+        </div>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; line-height: 1.5;">
+        Seamlessly merge all saved vocabulary, reading history, and pinned articles across your devices.
+      </p>
+      <div style="margin-bottom: 16px;">
+        <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); display: block; margin-bottom: 6px;">1. Export Data (From this device)</label>
+        <button class="primary-btn" id="exportSyncBtn" onclick="SyncManager.copyFullJSON()" style="margin: 0; background: #382a25;">📋 Copy Full Sync Data</button>
+      </div>
+      <div>
+        <label for="syncDataInput" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); display: block; margin-bottom: 6px;">2. Import Data (From another device)</label>
+        <textarea id="syncDataInput" rows="5" placeholder="Paste exported sync text here..."></textarea>
+        <button class="primary-btn" id="importSyncBtn" onclick="SyncManager.processTextImport()" style="margin-top: 10px;">✨ Merge & Update Data</button>
+        <!-- Persistent status message placed directly below the Merge button (hidden by default when empty) -->
+        <div id="syncStatusMsg" style="margin-top: 8px; font-size: 0.85rem; font-weight: 600; display: none; line-height: 1.4;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="vocabModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2>📚 Saved Vocabulary & Phrases</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('vocabModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="vocabToast" class="toast-msg"></div>
+      <div id="vocabProgressBox" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; display: none;"></div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 2px;">
+        <button id="vocabQueueBtn" class="action-sm-btn" onclick="VocabManager.startAnkiQueue()" disabled style="font-weight: 600;">Generate Details (0)</button>
+        <button class="action-sm-btn" onclick="VocabManager.openImportModal()" style="color: var(--accent); font-weight: 600;">📥 Import Data</button>
+      </div>
+
+      <div id="vocabListBody"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+        <button class="action-sm-btn" onclick="VocabManager.exportTSV()">Export (full TSV)</button>
+        <button class="action-sm-btn" onclick="VocabManager.exportCSV()">Export (simple)</button>
+      </div>
+      <button class="action-sm-btn" onclick="VocabManager.openClearConfirm()" style="color: #b94b29;">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<div id="importModal" class="modal-overlay" style="z-index: 1100;">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2>📥 Batch Import Vocabulary</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('importModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="importToast" class="toast-msg"></div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; line-height: 1.5;">
+        Paste your Kindle highlights, book notes, or phrases. Use tab-separated format (<code style="background:var(--card-bg); padding:1px 4px; border-radius:4px;">phrase \t context</code>) per line. AI will automatically normalize headings and generate Anki details.
+      </p>
+
+      <div class="field" style="margin-bottom: 12px;">
+        <div class="field-header"><label for="importSourceInput">Source / Book Title (Optional)</label></div>
+        <input type="text" id="importSourceInput" class="input-title-field" placeholder="e.g., Atomic Habits" style="margin-bottom: 0;">
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="importTextarea">Phrases & Contexts (Tab-separated)</label></div>
+        <textarea id="importTextarea" rows="7" placeholder="take for granted \t We often take clean water for granted...&#10;manage \t He was managing the project..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+      <button class="action-sm-btn" onclick="UI.closeModal('importModal')">Cancel</button>
+      <button class="primary-btn" onclick="VocabManager.executeBatchImport()" style="margin: 0; width: auto; padding: 6px 14px; font-size: 0.85rem;">✨ Import & Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="clearVocabConfirmModal" class="modal-overlay" style="z-index: 1200;">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2 style="color: #b94b29;">⚠️ Clear All Vocabulary?</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('clearVocabConfirmModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 18px 16px;">
+      <p style="margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;">
+        Are you sure you want to delete all saved phrases from this device? This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+      <button class="action-sm-btn" onclick="UI.closeModal('clearVocabConfirmModal')">Cancel</button>
+      <button class="action-sm-btn" onclick="VocabManager.executeClearAll()" style="background: #b94b29; color: #ffffff; border-color: #b94b29; font-weight: 600;">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<div id="deleteVocabConfirmModal" class="modal-overlay" style="z-index: 1200;">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2 style="color: #b94b29;">⚠️ Delete Phrase?</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('deleteVocabConfirmModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 18px 16px;">
+      <p style="margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;">
+        Are you sure you want to delete this phrase from your saved vocabulary?
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+      <button class="action-sm-btn" onclick="UI.closeModal('deleteVocabConfirmModal')">Cancel</button>
+      <button class="action-sm-btn" onclick="VocabManager.executeDelete()" style="background: #b94b29; color: #ffffff; border-color: #b94b29; font-weight: 600;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2>🕒 History & Library</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('historyModal')">&times;</button>
+    </div>
+    <div class="modal-tab-bar">
+      <button id="tabRecentBtn" class="modal-tab-btn active" onclick="HistoryManager.switchTab('recent')">🕒 Recent</button>
+      <button id="tabSavedBtn" class="modal-tab-btn" onclick="HistoryManager.switchTab('saved')">📌 Saved (Stock)</button>
+    </div>
+    <div class="modal-body">
+      <div id="historyToast" class="toast-msg"></div>
+      <div id="historyListBody"></div>
+    </div>
+    <div class="modal-footer">
+      <div></div>
+      <button id="clearHistoryBtn" class="action-sm-btn" onclick="HistoryManager.clearCurrentTab()" style="color: #b94b29;">Clear Recent</button>
+    </div>
+  </div>
+</div>
+
+<div id="clearHistoryConfirmModal" class="modal-overlay" style="z-index: 1200;">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2 style="color: #b94b29;" id="clearHistoryModalTitle">⚠️ Clear History?</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('clearHistoryConfirmModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 18px 16px;">
+      <p style="margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;" id="clearHistoryModalDesc">
+        Are you sure you want to clear all items? This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+      <button class="action-sm-btn" onclick="UI.closeModal('clearHistoryConfirmModal')">Cancel</button>
+      <button class="action-sm-btn" onclick="HistoryManager.executeClearAll()" style="background: #b94b29; color: #ffffff; border-color: #b94b29; font-weight: 600;">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<div id="deleteHistoryConfirmModal" class="modal-overlay" style="z-index: 1200;">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2 style="color: #b94b29;">⚠️ Delete Article?</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('deleteHistoryConfirmModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 18px 16px;">
+      <p style="margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.5;">
+        Are you sure you want to delete this article from your history?
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+      <button class="action-sm-btn" onclick="UI.closeModal('deleteHistoryConfirmModal')">Cancel</button>
+      <button class="action-sm-btn" onclick="HistoryManager.executeDelete()" style="background: #b94b29; color: #ffffff; border-color: #b94b29; font-weight: 600;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="editTitleModal" class="modal-overlay" style="z-index: 1300;">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2>✏️ Edit Title</h2>
+      <button class="modal-close-btn" onclick="UI.closeModal('editTitleModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 18px 16px;">
+      <input type="text" id="editTitleInput" class="input-title-field" placeholder="Enter new title..." style="margin-bottom: 0;">
+    </div>
+    <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+      <button class="action-sm-btn" onclick="UI.closeModal('editTitleModal')">Cancel</button>
+      <button class="action-sm-btn" onclick="HistoryManager.executeEditTitle()" style="background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 600;">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* CONFIG & CONSTANTS */
+  const GEMINI_API_KEY = "";
+  const SHORT_TEXT_THRESHOLD_WORDS = 50; 
+  const DB_NAME = 'LinguaLensDB';
+  const DB_VERSION = 2;
+  const STORE_VOCAB = 'vocab';
+  const STORE_CACHE = 'cache';
+  const MAX_RECENT_COUNT = 20;
+
+  /* INDEXEDDB WRAPPER */
+  const DB = {
+    dbInstance: null,
+    init: () => {
+      return new Promise((resolve, reject) => {
+        if (DB.dbInstance) { resolve(DB.dbInstance); return; }
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          DB.dbInstance = request.result;
+          resolve(DB.dbInstance);
+        };
+        request.onupgradeneeded = event => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_VOCAB)) {
+            db.createObjectStore(STORE_VOCAB, { keyPath: 'id', autoIncrement: true });
+          }
+          if (!db.objectStoreNames.contains(STORE_CACHE)) {
+            db.createObjectStore(STORE_CACHE, { keyPath: 'key' });
+          }
+        };
+      });
+    },
+    getAll: (storeName) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const db = await DB.init();
+          const tx = db.transaction(storeName, 'readonly');
+          const store = tx.objectStore(storeName);
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        } catch (e) { reject(e); }
+      });
+    },
+    set: (storeName, value) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const db = await DB.init();
+          const tx = db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          const request = store.put(value);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        } catch (e) { reject(e); }
+      });
+    },
+    get: (storeName, key) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const db = await DB.init();
+          const tx = db.transaction(storeName, 'readonly');
+          const store = tx.objectStore(storeName);
+          const request = store.get(key);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        } catch (e) { reject(e); }
+      });
+    },
+    delete: (storeName, key) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const db = await DB.init();
+          const tx = db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          const request = store.delete(key);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch (e) { reject(e); }
+      });
+    },
+    clear: (storeName) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const db = await DB.init();
+          const tx = db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          const request = store.clear();
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch (e) { reject(e); }
+      });
+    },
+    setAllVocab: (list) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const db = await DB.init();
+          const tx = db.transaction(STORE_VOCAB, 'readwrite');
+          const store = tx.objectStore(STORE_VOCAB);
+          store.clear();
+          list.forEach(item => {
+            const cleanItem = { ...item };
+            delete cleanItem.id;
+            store.add(cleanItem);
+          });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        } catch (e) { reject(e); }
+      });
+    }
+  };
+
+  /* UTILS */
+  const Utils = {
+    escapeHtml: str => (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"),
+    escapeJs: str => (str || '').replace(/'/g, "\\'"),
+    countWords: str => (str && str.trim()) ? (str.trim().match(/\b[\w'-]+\b/g) || []).length : 0,
+    simpleHash: str => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0; }
+      return hash.toString(36);
+    },
+    normalizeText: str => (str || '').replace(/\s+/g, ' ').trim(),
+    getCacheKey: text => 'll_cache_' + Utils.simpleHash(Utils.normalizeText(text)),
+    formatToDictEntry: phrase => {
+      if (!phrase || typeof phrase !== 'string') return phrase || '';
+      const trimmed = phrase.trim();
+      if (!trimmed) return '';
+      if (trimmed === trimmed.toUpperCase() && trimmed.length > 1) return trimmed;
+      const firstChar = trimmed.charAt(0);
+      if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) return trimmed;
+      return firstChar.toLowerCase() + trimmed.slice(1);
+    },
+    getCefrClass: cefr => {
+      if (!cefr) return '';
+      const upper = cefr.trim().toUpperCase();
+      if (upper.startsWith('A1')) return 'cefr-a1';
+      if (upper.startsWith('A2')) return 'cefr-a2';
+      if (upper.startsWith('B1')) return 'cefr-b1';
+      if (upper.startsWith('B2')) return 'cefr-b2';
+      if (upper.startsWith('C1')) return 'cefr-c1';
+      if (upper.startsWith('C2')) return 'cefr-c2';
+      return '';
+    }
+  };
+
+  /* UI & MODAL HELPERS */
+  const UI = {
+    statusTimer: null,
+    openModal: id => { 
+      const el = document.getElementById(id); 
+      if (el) {
+        el.classList.add('open');
+        if (id === 'directSyncModal') {
+          SyncManager.initApiKeyInput();
+          const statusMsg = document.getElementById('syncStatusMsg');
+          if (statusMsg) { statusMsg.style.display = 'none'; statusMsg.innerText = ''; }
+        }
+      }
+    },
+    closeModal: id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); },
+    showToast: (elemId, message, type = 'success') => {
+      const toast = document.getElementById(elemId);
+      if (!toast) return;
+      toast.innerText = message;
+      toast.className = `toast-msg ${type}`;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    },
+    setSyncStatus: (message, type = 'success') => {
+      const msgBox = document.getElementById('syncStatusMsg');
+      if (!msgBox) return;
+      if (!message) {
+        msgBox.style.display = 'none';
+        msgBox.innerText = '';
+        return;
+      }
+      msgBox.innerText = message;
+      msgBox.style.display = 'block';
+      if (type === 'success') {
+        msgBox.style.color = '#2e7d32';
+      } else if (type === 'error') {
+        msgBox.style.color = '#b94b29';
+      } else {
+        msgBox.style.color = 'var(--text-main)';
+      }
+    },
+    updateStatusBar: (text, show = true, autoHideMs = 0, retryAction = null) => {
+      const bar = document.getElementById('statusBar');
+      const textElem = document.getElementById('statusBarText');
+      const retryBtn = document.getElementById('statusBarRetryBtn');
+
+      if (UI.statusTimer) {
+        clearTimeout(UI.statusTimer);
+        UI.statusTimer = null;
+      }
+
+      if (bar && textElem) {
+        if (show) {
+          textElem.innerText = text;
+          bar.style.display = 'flex';
+
+          if (retryBtn) {
+            if (typeof retryAction === 'function') {
+              retryBtn.style.display = 'inline-flex';
+              retryBtn.onclick = retryAction;
+            } else {
+              retryBtn.style.display = 'none';
+              retryBtn.onclick = null;
+            }
+          }
+
+          if (autoHideMs > 0) {
+            UI.statusTimer = setTimeout(() => {
+              bar.style.display = 'none';
+              UI.statusTimer = null;
+            }, autoHideMs);
+          }
+        } else {
+          bar.style.display = 'none';
+          if (retryBtn) retryBtn.style.display = 'none';
+        }
+      }
+    },
+    closeAllPopups: () => {
+      document.querySelectorAll('.interactive-span.active').forEach(el => {
+        el.classList.remove('active');
+        const bubble = el.querySelector('.popup-bubble');
+        if (bubble) {
+          bubble.style.left = '50%';
+          bubble.style.transform = 'translateX(-50%)';
+          bubble.style.setProperty('--arrow-left', '50%');
+        }
+      });
+    }
+  };
+
+  /* THEME MANAGER */
+  const ThemeManager = {
+    toggle: () => {
+      document.body.classList.toggle('dark-theme');
+      const isDark = document.body.classList.contains('dark-theme');
+      document.getElementById('themeBtnText').innerText = isDark ? '☀️ Light' : '🌙 Dark';
+    }
+  };
+
+  /* AUDIO MANAGER (TTS & CHAIN PLAY) */
+  const AudioManager = {
+    isChainActive: false,
+    toggleChainPlay: () => {
+      AudioManager.isChainActive = !AudioManager.isChainActive;
+      const chainBtn = document.getElementById('chainPlayBtn');
+      if (chainBtn) chainBtn.classList.toggle('active', AudioManager.isChainActive);
+    },
+    clearHighlights: () => {
+      document.querySelectorAll('.sentence-block.playing-sentence').forEach(el => {
+        el.classList.remove('playing-sentence');
+      });
+    },
+    playTTS: (text, playButtonElem = null, sentenceBlockElem = null, isChainTransition = false) => {
+      if (!('speechSynthesis' in window)) {
+        alert('Speech synthesis is not supported in this browser.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      AudioManager.clearHighlights();
+
+      if (!isChainTransition) UI.closeAllPopups();
+      if (!text) return;
+
+      if (sentenceBlockElem) sentenceBlockElem.classList.add('playing-sentence');
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 1.0;
+
+      utterance.onend = () => {
+        if (sentenceBlockElem) sentenceBlockElem.classList.remove('playing-sentence');
+
+        if (AudioManager.isChainActive && playButtonElem) {
+          const allPlayBtns = Array.from(document.querySelectorAll('.sentence-play-btn'));
+          const currentIndex = allPlayBtns.indexOf(playButtonElem);
+          if (currentIndex !== -1 && currentIndex + 1 < allPlayBtns.length) {
+            setTimeout(() => {
+              if (AudioManager.isChainActive) {
+                const nextBtn = allPlayBtns[currentIndex + 1];
+                const nextBlock = nextBtn.closest('.sentence-block');
+                AudioManager.playTTSFromElement(nextBtn, nextBlock, true);
+              }
+            }, 500);
+          }
+        }
+      };
+
+      utterance.onerror = () => {
+        if (sentenceBlockElem) sentenceBlockElem.classList.remove('playing-sentence');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    },
+    playPopupBubbleTTS: (text, e) => {
+      if (e) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      if (!text) return;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    },
+    playTTSFromElement: (playBtn, sentenceBlock, isChainTransition = false) => {
+      const spans = sentenceBlock.querySelectorAll('.interactive-span');
+      const text = Array.from(spans).map(s => s.childNodes[0]?.nodeValue || s.innerText).join('');
+      AudioManager.playTTS(text, playBtn, sentenceBlock, isChainTransition);
+    },
+    stopAll: () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      AudioManager.clearHighlights();
+      UI.closeAllPopups();
+    }
+  };
+
+  /* VOCABULARY MANAGER */
+  const VocabManager = {
+    queueRunning: false,
+    pendingDeleteId: null,
+    inMemoryList: [],
+    backgroundAnkiRunning: false,
+
+    loadIntoMemory: async () => {
+      try {
+        VocabManager.inMemoryList = await DB.getAll(STORE_VOCAB);
+        VocabManager.updateCount();
+        VocabManager.updateQueueButtonState();
+      } catch (e) { VocabManager.inMemoryList = []; }
+    },
+    getSaved: () => VocabManager.inMemoryList,
+    saveList: async (list) => {
+      VocabManager.inMemoryList = list;
+      try {
+        await DB.setAllVocab(list);
+        VocabManager.updateCount();
+        VocabManager.updateQueueButtonState();
+      } catch (e) {}
+    },
+    isSaved: (phrase, context = '', source = '') => {
+      const list = VocabManager.getSaved();
+      const targetP = Utils.formatToDictEntry(phrase).trim().toLowerCase();
+      const targetC = (context || '').trim().toLowerCase();
+      const targetS = (source || '').trim().toLowerCase();
+
+      return list.some(item => {
+        const pMatch = Utils.formatToDictEntry(item.phrase || item.word || '').trim().toLowerCase() === targetP;
+        const cMatch = targetC ? (item.context || '').trim().toLowerCase() === targetC : true;
+        const sMatch = targetS ? (item.source || '').trim().toLowerCase() === targetS : true;
+        return pMatch && cMatch && sMatch;
+      });
+    },
+    toggleItem: async (itemData, starBtnElem) => {
+      let list = VocabManager.getSaved();
+      const targetP = Utils.formatToDictEntry(itemData.phrase || itemData.word || '').trim().toLowerCase();
+      const targetC = (itemData.context || '').trim().toLowerCase();
+      const targetS = (itemData.source || '').trim().toLowerCase();
+
+      const idx = list.findIndex(item => {
+        const pMatch = Utils.formatToDictEntry(item.phrase || item.word || '').trim().toLowerCase() === targetP;
+        const cMatch = targetC ? (item.context || '').trim().toLowerCase() === targetC : true;
+        const sMatch = targetS ? (item.source || '').trim().toLowerCase() === targetS : true;
+        return pMatch && cMatch && sMatch;
+      });
+
+      if (idx >= 0) {
+        list.splice(idx, 1);
+        if (starBtnElem) { starBtnElem.classList.remove('saved'); starBtnElem.innerText = '☆'; }
+      } else {
+        list.unshift({
+          phrase: itemData.phrase || itemData.word || '',
+          ipa: itemData.ipa || '',
+          pos: itemData.pos || 'phrase',
+          cefr: itemData.cefr || '',
+          trans: itemData.trans || itemData.ja || '',
+          syn: itemData.syn || '',
+          definition: itemData.definition || '',
+          collocation: itemData.collocation || '',
+          context: (itemData.context || '').trim(),
+          source: (itemData.source || '').trim(),
+          anki_sentence_en: '',
+          anki_sentence_ja: ''
+        });
+        if (starBtnElem) { starBtnElem.classList.add('saved'); starBtnElem.innerText = '⭐'; }
+      }
+      await VocabManager.saveList(list);
+    },
+    addManualItem: async (phraseText, contextText) => {
+      if (!phraseText || !phraseText.trim()) return false;
+      let list = VocabManager.getSaved();
+
+      list.unshift({
+        phrase: phraseText.trim(),
+        ipa: '',
+        pos: phraseText.includes(' ') ? 'phrase' : 'n',
+        cefr: '',
+        trans: '',
+        syn: '',
+        definition: '',
+        collocation: '',
+        context: (contextText || '').trim(),
+        source: '',
+        anki_sentence_en: '',
+        anki_sentence_ja: ''
+      });
+      await VocabManager.saveList(list);
+      return true;
+    },
+    updateCount: () => {
+      const countElem = document.getElementById('vocabCount');
+      if (countElem) countElem.innerText = VocabManager.getSaved().length;
+    },
+    updateQueueButtonState: () => {
+      const list = VocabManager.getSaved();
+      const missingCount = list.filter(item => !item.anki_sentence_en || !item.anki_sentence_ja || !item.definition || !item.trans).length;
+      const btn = document.getElementById('vocabQueueBtn');
+      if (btn) {
+        btn.innerText = `Generate Details (${missingCount})`;
+        btn.disabled = (missingCount === 0 || VocabManager.queueRunning);
+      }
+    },
+    openModal: async () => {
+      const toast = document.getElementById('vocabToast');
+      if (toast) toast.style.display = 'none';
+      await VocabManager.loadIntoMemory();
+      VocabManager.renderModalList();
+      UI.openModal('vocabModal');
+    },
+    openImportModal: () => {
+      const toast = document.getElementById('importToast');
+      if (toast) toast.style.display = 'none';
+      document.getElementById('importSourceInput').value = '';
+      document.getElementById('importTextarea').value = '';
+      UI.openModal('importModal');
+    },
+    executeBatchImport: async () => {
+      const sourceVal = document.getElementById('importSourceInput').value.trim();
+      const rawText = document.getElementById('importTextarea').value.trim();
+
+      if (!rawText) {
+        UI.showToast('importToast', 'Please paste at least one phrase and context.', 'error');
+        return;
+      }
+
+      const lines = rawText.split('\n');
+      let addedCount = 0;
+      let list = VocabManager.getSaved();
+
+      lines.forEach(line => {
+        const parts = line.split('\t');
+        if (parts.length >= 2) {
+          const rawPhrase = parts[0].trim();
+          const rawContext = parts.slice(1).join('\t').trim();
+          if (rawPhrase && rawContext) {
+            list.unshift({
+              phrase: rawPhrase,
+              ipa: '',
+              pos: rawPhrase.includes(' ') ? 'phrase' : 'n',
+              cefr: '',
+              trans: '',
+              syn: '',
+              definition: '',
+              collocation: '',
+              context: rawContext,
+              source: sourceVal,
+              anki_sentence_en: '',
+              anki_sentence_ja: ''
+            });
+            addedCount++;
+          }
+        }
+      });
+
+      if (addedCount === 0) {
+        UI.showToast('importToast', 'No valid rows found. Please use tab-separated format (phrase \\t context).', 'error');
+        return;
+      }
+
+      await VocabManager.saveList(list);
+      UI.closeModal('importModal');
+      VocabManager.renderModalList();
+      UI.showToast('vocabToast', `Successfully imported ${addedCount} phrases! ✨ Click 'Generate Details' when ready.`, 'success');
+    },
+    renderModalList: () => {
+      const list = VocabManager.getSaved();
+      const body = document.getElementById('vocabListBody');
+      VocabManager.updateQueueButtonState();
+
+      if (list.length === 0) {
+        body.innerHTML = '<div style="text-align:center; color: var(--text-muted); padding: 30px 0;">No saved phrases yet.<br>Tap ⭐ inside any phrase popup or use 📥 Import Data.</div>';
+        document.getElementById('vocabProgressBox').style.display = 'none';
+        return;
+      }
+
+      const topMap = new Map();
+
+      list.forEach((item, index) => {
+        const rawSource = item.source ? item.source.trim() : '';
+        const sourceKey = rawSource !== '' ? rawSource : 'Other Vocabulary';
+
+        const contextKey = item.context && item.context.trim() !== '' ? item.context.trim() : 'General / No Context';
+
+        if (!topMap.has(sourceKey)) topMap.set(sourceKey, new Map());
+        const subMap = topMap.get(sourceKey);
+
+        if (!subMap.has(contextKey)) subMap.set(contextKey, []);
+        subMap.get(contextKey).push({ ...item, originalIndex: index });
+      });
+
+      body.innerHTML = '';
+
+      topMap.forEach((subMap, sourceKey) => {
+        let totalCountInSource = 0;
+        subMap.forEach(items => { totalCountInSource += items.length; });
+
+        const bannerDiv = document.createElement('div');
+        bannerDiv.className = 'vocab-section-banner';
+        bannerDiv.innerText = `${sourceKey} (${totalCountInSource})`;
+        body.appendChild(bannerDiv);
+
+        subMap.forEach((items, contextKey) => {
+          const groupCard = document.createElement('div');
+          groupCard.className = 'vocab-group-card';
+
+          let itemsHtml = items.map(item => {
+            let cleanIpa = item.ipa ? item.ipa.trim() : '';
+            const isPhraseItem = (item.phrase || '').includes(' ') || (item.pos || '').includes('phrase') || (item.pos || '').includes('idiom');
+            if (isPhraseItem) {
+              cleanIpa = '';
+            } else if (cleanIpa) {
+              if (!cleanIpa.startsWith('/')) cleanIpa = '/' + cleanIpa;
+              if (!cleanIpa.endsWith('/')) cleanIpa = cleanIpa + '/';
+            }
+
+            const posTag = item.pos ? `[${item.pos}]` : '';
+            const cefrClass = Utils.getCefrClass(item.cefr);
+            const cefrTag = item.cefr ? `<span class="cefr-badge ${cefrClass}">${Utils.escapeHtml(item.cefr)}</span>` : '';
+
+            let ankiSectionHtml = '';
+            if (item.anki_sentence_en && item.anki_sentence_ja) {
+              ankiSectionHtml = `
+                <div class="vocab-anki-section" id="anki-sec-${item.originalIndex}">
+                  <div class="vocab-anki-en">${Utils.escapeHtml(item.anki_sentence_en)}</div>
+                  <div class="vocab-anki-ja">${Utils.escapeHtml(item.anki_sentence_ja)}</div>
+                </div>
+              `;
+            } else {
+              ankiSectionHtml = `
+                <div class="vocab-anki-section" id="anki-sec-${item.originalIndex}">
+                  <div class="vocab-anki-waiting">waiting...</div>
+                </div>
+              `;
+            }
+
+            const itemIdentifier = item.id !== undefined ? item.id : item.originalIndex;
+
+            return `
+            <div class="vocab-item-row" data-vocab-index="${item.originalIndex}">
+              <div class="vocab-item-top">
+                <div class="vocab-item-phrase">${Utils.escapeHtml(item.phrase || item.word || '')}</div>
+                <div class="vocab-card-toolbar">
+                  <button class="vocab-card-btn" onclick="VocabManager.playItemAudio('${Utils.escapeJs(item.phrase || item.word || '')}', '${Utils.escapeJs(item.anki_sentence_en || '')}')" title="Play Audio">🔊</button>
+                  <button class="vocab-card-btn" onclick="VocabManager.promptDelete(${itemIdentifier})" title="Delete">🗑</button>
+                </div>
+              </div>
+              <div class="vocab-detail-meta">
+                ${cleanIpa ? `<span class="vocab-detail-phonetic">${Utils.escapeHtml(cleanIpa)}</span>` : ''}
+                ${posTag ? `<span class="text-pos">${Utils.escapeHtml(posTag)}</span>` : ''}
+                ${cefrTag}
+              </div>
+              <div class="vocab-card-trans">${Utils.escapeHtml(item.trans || item.ja || '')}</div>
+              ${item.definition ? `<div class="vocab-card-def">${Utils.escapeHtml(item.definition)}</div>` : ''}
+              ${item.syn ? `<div class="vocab-card-syn">Syn: ${Utils.escapeHtml(item.syn)}</div>` : ''}
+              ${item.collocation ? `<div class="vocab-card-colloc">Colloc: ${Utils.escapeHtml(item.collocation)}</div>` : ''}
+              ${ankiSectionHtml}
+            </div>
+          `;}).join('');
+
+          const displayHeader = contextKey !== 'General / No Context' ? `📌 ${contextKey}` : '📌 General / Other';
+          groupCard.innerHTML = `
+            <div class="vocab-group-header">${Utils.escapeHtml(displayHeader)}</div>
+            <div class="vocab-group-body">${itemsHtml}</div>
+          `;
+          body.appendChild(groupCard);
+        });
+      });
+    },
+    playItemAudio: (wordText, ankiSentenceText) => {
+      if (!('speechSynthesis' in window)) {
+        alert('Speech synthesis is not supported in this browser.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      AudioManager.clearHighlights();
+      UI.closeAllPopups();
+      if (!wordText) return;
+
+      const wordUtterance = new SpeechSynthesisUtterance(wordText);
+      wordUtterance.lang = 'en-US';
+      wordUtterance.rate = 1.0;
+
+      if (ankiSentenceText && ankiSentenceText.trim() !== '') {
+        wordUtterance.onend = () => {
+          setTimeout(() => {
+            const sentenceUtterance = new SpeechSynthesisUtterance(ankiSentenceText);
+            sentenceUtterance.lang = 'en-US';
+            sentenceUtterance.rate = 1.0;
+            window.speechSynthesis.speak(sentenceUtterance);
+          }, 500);
+        };
+      }
+      window.speechSynthesis.speak(wordUtterance);
+    },
+    startAnkiQueue: async () => {
+      if (VocabManager.queueRunning) return;
+      const apiKey = App.getApiKey();
+      if (!apiKey) {
+        UI.showToast('vocabToast', 'Please set your Gemini API key in Data Sync & Settings.', 'error');
+        return;
+      }
+
+      let list = VocabManager.getSaved();
+      const missingItemsWithIndex = [];
+      list.forEach((item, index) => {
+        if (!item.anki_sentence_en || !item.anki_sentence_ja || !item.definition || !item.trans) {
+          missingItemsWithIndex.push({ item, originalIndex: index });
+        }
+      });
+
+      if (missingItemsWithIndex.length === 0) return;
+
+      VocabManager.queueRunning = true;
+      VocabManager.updateQueueButtonState();
+
+      const progressBox = document.getElementById('vocabProgressBox');
+      progressBox.style.display = 'block';
+
+      const CHUNK_SIZE = 10;
+      const chunks = [];
+      for (let i = 0; i < missingItemsWithIndex.length; i += CHUNK_SIZE) {
+        chunks.push(missingItemsWithIndex.slice(i, i + CHUNK_SIZE));
+      }
+
+      let processedBatches = 0;
+      const totalBatches = chunks.length;
+
+      for (const chunk of chunks) {
+        if (!document.getElementById('vocabModal').classList.contains('open') && VocabManager.queueRunning && document.getElementById('vocabModal').style.visibility !== 'visible') {
+          // If modal closed and running manually, maybe continue or check
+        }
+
+        processedBatches++;
+        progressBox.innerText = `Generating details... (Batch ${processedBatches}/${totalBatches})`;
+
+        let generatedList = null;
+        try {
+          const itemsPayload = chunk.map(entry => ({
+            phrase: entry.item.phrase,
+            translation: entry.item.trans || '',
+            context: entry.item.context || '',
+            source: entry.item.source || ''
+          }));
+          generatedList = await VocabManager.fetchBatchDetails(itemsPayload, apiKey);
+        } catch (e) {
+          UI.showToast('vocabToast', 'API error or limit reached. Processing stopped safely.', 'error');
+          break;
+        }
+
+        if (Array.isArray(generatedList) && generatedList.length > 0) {
+          let currentList = VocabManager.getSaved();
+          let updated = false;
+
+          generatedList.forEach((gen, genIdx) => {
+            if (!gen) return;
+            const targetChunkEntry = chunk[genIdx];
+            if (!targetChunkEntry) return;
+
+            const targetIdx = targetChunkEntry.originalIndex;
+            if (targetIdx >= 0 && targetIdx < currentList.length) {
+              if (gen.phrase) currentList[targetIdx].phrase = gen.phrase;
+              if (gen.pos) currentList[targetIdx].pos = gen.pos;
+              if (gen.ipa) currentList[targetIdx].ipa = gen.ipa;
+              if (gen.cefr) currentList[targetIdx].cefr = gen.cefr;
+              if (gen.trans) currentList[targetIdx].trans = gen.trans;
+              if (gen.syn) currentList[targetIdx].syn = gen.syn;
+              if (gen.definition) currentList[targetIdx].definition = gen.definition;
+              if (gen.collocation) currentList[targetIdx].collocation = gen.collocation;
+              if (gen.en) currentList[targetIdx].anki_sentence_en = gen.en;
+              if (gen.ja) currentList[targetIdx].anki_sentence_ja = gen.ja;
+              updated = true;
+            }
+          });
+
+          if (updated) {
+            await VocabManager.saveList(currentList);
+            VocabManager.renderModalList();
+          }
+        } else {
+          UI.showToast('vocabToast', 'Failed to fetch details. Processing stopped safely.', 'error');
+          break;
+        }
+
+        if (processedBatches < totalBatches) {
+          progressBox.innerText = `Waiting (interval)... (${processedBatches}/${totalBatches})`;
+          await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+
+      VocabManager.queueRunning = false;
+      progressBox.style.display = 'none';
+      VocabManager.updateQueueButtonState();
+    },
+    runBackgroundAnkiAutoRepair: async () => {
+      if (VocabManager.backgroundAnkiRunning || VocabManager.queueRunning) return;
+      VocabManager.backgroundAnkiRunning = true;
+
+      try {
+        await VocabManager.loadIntoMemory();
+        let list = VocabManager.getSaved();
+        const missingItemsWithIndex = [];
+        list.forEach((item, index) => {
+          if (!item.anki_sentence_en || !item.anki_sentence_ja || !item.definition || !item.trans) {
+            missingItemsWithIndex.push({ item, originalIndex: index });
+          }
+        });
+
+        // Only run if 10 or more items are missing details
+        if (missingItemsWithIndex.length < 10) {
+          VocabManager.backgroundAnkiRunning = false;
+          return;
+        }
+
+        const apiKey = App.getApiKey();
+        if (!apiKey) {
+          VocabManager.backgroundAnkiRunning = false;
+          return;
+        }
+
+        while (true) {
+          if (App.isProcessingState) break; // User is operating
+          await VocabManager.loadIntoMemory();
+          list = VocabManager.getSaved();
+          const currentMissing = [];
+          list.forEach((item, index) => {
+            if (!item.anki_sentence_en || !item.anki_sentence_ja || !item.definition || !item.trans) {
+              currentMissing.push({ item, originalIndex: index });
+            }
+          });
+
+          if (currentMissing.length < 10) break; // Stop when remaining is less than 10
+
+          const chunk = currentMissing.slice(0, 10);
+          let generatedList = null;
+          try {
+            const itemsPayload = chunk.map(entry => ({
+              phrase: entry.item.phrase,
+              translation: entry.item.trans || '',
+              context: entry.item.context || '',
+              source: entry.item.source || ''
+            }));
+            generatedList = await VocabManager.fetchBatchDetails(itemsPayload, apiKey);
+          } catch (e) {
+            break;
+          }
+
+          if (Array.isArray(generatedList) && generatedList.length > 0) {
+            let currentList = VocabManager.getSaved();
+            let updated = false;
+
+            generatedList.forEach((gen, genIdx) => {
+              if (!gen) return;
+              const targetChunkEntry = chunk[genIdx];
+              if (!targetChunkEntry) return;
+
+              const targetIdx = targetChunkEntry.originalIndex;
+              if (targetIdx >= 0 && targetIdx < currentList.length) {
+                if (gen.phrase) currentList[targetIdx].phrase = gen.phrase;
+                if (gen.pos) currentList[targetIdx].pos = gen.pos;
+                if (gen.ipa) currentList[targetIdx].ipa = gen.ipa;
+                if (gen.cefr) currentList[targetIdx].cefr = gen.cefr;
+                if (gen.trans) currentList[targetIdx].trans = gen.trans;
+                if (gen.syn) currentList[targetIdx].syn = gen.syn;
+                if (gen.definition) currentList[targetIdx].definition = gen.definition;
+                if (gen.collocation) currentList[targetIdx].collocation = gen.collocation;
+                if (gen.en) currentList[targetIdx].anki_sentence_en = gen.en;
+                if (gen.ja) currentList[targetIdx].anki_sentence_ja = gen.ja;
+                updated = true;
+              }
+            });
+
+            if (updated) {
+              await VocabManager.saveList(currentList);
+            }
+          } else {
+            break;
+          }
+
+          // Interval between background batches
+          await new Promise(r => setTimeout(r, 6000));
+        }
+      } catch (e) {}
+
+      VocabManager.backgroundAnkiRunning = false;
+    },
+    fetchBatchDetails: async (itemsPayload, apiKey) => {
+      const prompt = `You are an expert English teacher. For each item in the following list, normalize the phrase to its standard dictionary headword form (e.g., base verb for verbs, singular form for standard nouns).
+CRITICAL: Do NOT singularize plural-only nouns or nouns whose plural form carries a specific distinct meaning reflecting the provided context and translation (e.g., keep "premises" for buildings/land, "goods" for merchandise, "clothes", "customs", "savings").
+
+Determine its part of speech (pos: n, v, phrasal v, adj, adv, prep, conj, phrase, idiom), IPA pronunciation (must match the normalized phrase form exactly), CEFR level (A1-C2), Japanese translation (trans), simple English definition (definition), synonyms (syn), collocations (collocation), and a natural flashcard (Anki) sentence (en & ja) reflecting the context and source book title if provided.
+
+Input List:
+${JSON.stringify(itemsPayload, null, 2)}
+
+Rules:
+1. phrase: Normalized dictionary headword. Preserve plural forms for plural-only/distinct-meaning nouns (e.g. "premises").
+ 2. pos: Exactly one of ["n", "v", "phrasal v", "adj", "adv", "prep", "conj", "phrase", "idiom"].
+3. ipa: Phonetic transcription corresponding precisely to the "phrase" form.
+4. cefr: CEFR level (e.g. B1).
+5. trans: Japanese meaning (comma-separated with Japanese commas '、').
+6. definition: Simple English definition using A1/A2 vocabulary.
+7. syn: Synonyms if any (or "").
+8. collocation: Common collocations (or "").
+9. anki sentence (en & ja): Short, natural sentence (6-10 words) highlighting the phrase, influenced by context/source.
+10. Output strictly in JSON format as an array of objects in the EXACT SAME ORDER as the input list (or a single object if only 1 item), containing keys "phrase", "pos", "ipa", "cefr", "trans", "definition", "syn", "collocation", "en", "ja".`;
+
+      const schema = {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            phrase: { type: "STRING" },
+            pos: { type: "STRING" },
+            ipa: { type: "STRING" },
+            cefr: { type: "STRING" },
+            trans: { type: "STRING" },
+            definition: { type: "STRING" },
+            syn: { type: "STRING" },
+            collocation: { type: "STRING" },
+            en: { type: "STRING" },
+            ja: { type: "STRING" }
+          },
+          required: ["phrase", "pos", "ipa", "cefr", "trans", "definition", "syn", "collocation", "en", "ja"]
+        }
+      };
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0.2 }
+        })
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+      const rawParsed = JSON.parse(data.candidates[0].content.parts[0].text);
+
+      if (Array.isArray(rawParsed)) {
+        return rawParsed;
+      } else if (rawParsed && typeof rawParsed === 'object') {
+        return [rawParsed];
+      }
+      return null;
+    },
+    promptDelete: id => {
+      VocabManager.pendingDeleteId = id;
+      UI.openModal('deleteVocabConfirmModal');
+    },
+    executeDelete: async () => {
+      if (VocabManager.pendingDeleteId === null) return;
+      let list = VocabManager.getSaved();
+      const targetId = VocabManager.pendingDeleteId;
+      const idx = list.findIndex(item => item.id === targetId || item.originalIndex === targetId);
+      if (idx !== -1) {
+        list.splice(idx, 1);
+      } else if (typeof targetId === 'number' && targetId >= 0 && targetId < list.length) {
+        list.splice(targetId, 1);
+      }
+      await VocabManager.saveList(list);
+      VocabManager.renderModalList();
+
+      document.querySelectorAll('.popup-star-btn').forEach(btn => {
+        const phrase = btn.dataset.phrase;
+        const context = btn.dataset.context || '';
+        const source = btn.dataset.source || '';
+        if (phrase && !VocabManager.isSaved(phrase, context, source)) {
+          btn.classList.remove('saved');
+          btn.innerText = '☆';
+        }
+      });
+      VocabManager.pendingDeleteId = null;
+      UI.closeModal('deleteVocabConfirmModal');
+    },
+    openClearConfirm: () => {
+      if (VocabManager.getSaved().length === 0) {
+        UI.showToast('vocabToast', 'Vocabulary list is already empty.', 'error');
+        return;
+      }
+      UI.openModal('clearVocabConfirmModal');
+    },
+    executeClearAll: async () => {
+      await VocabManager.saveList([]);
+      VocabManager.renderModalList();
+      UI.closeModal('clearVocabConfirmModal');
+      UI.showToast('vocabToast', 'All saved vocabulary has been cleared. ✨', 'success');
+    },
+    exportCSV: () => {
+      const list = VocabManager.getSaved();
+      if (list.length === 0) { UI.showToast('vocabToast', 'No data to export.', 'error'); return; }
+
+      const clean = str => (str || '').replace(/[\r\n\t]/g, ' ').trim();
+      let rows = [];
+
+      list.forEach(item => {
+        let cleanIpa = item.ipa ? item.ipa.trim() : '';
+        const isPhraseItem = (item.phrase || '').includes(' ') || (item.pos || '').includes('phrase') || (item.pos || '').includes('idiom');
+        if (isPhraseItem) {
+          cleanIpa = '';
+        } else if (cleanIpa) {
+          if (!cleanIpa.startsWith('/')) cleanIpa = '/' + cleanIpa;
+          if (!cleanIpa.endsWith('/')) cleanIpa = cleanIpa + '/';
+        }
+
+        const posStr = item.pos ? `[${item.pos}]` : '';
+        let col1Parts = [item.phrase];
+        if (cleanIpa) col1Parts.push(cleanIpa);
+        if (posStr) col1Parts.push(posStr);
+        const col1 = clean(col1Parts.join(' '));
+
+        let col2Parts = [];
+        if (item.cefr && item.cefr.trim()) col2Parts.push(`(${item.cefr.trim().toUpperCase()})`);
+        col2Parts.push(clean(item.trans));
+        const col2 = clean(col2Parts.join(' '));
+
+        const col3 = clean(item.syn);
+        const col4 = clean(item.anki_sentence_en || item.context);
+
+        rows.push([col1, col2, col3, col4].map(v => `"${v.replace(/"/g, '""')}"`).join(','));
+      });
+
+      navigator.clipboard.writeText(rows.join('\n')).then(() => {
+        UI.showToast('vocabToast', 'Simple CSV copied to clipboard! ✨', 'success');
+      }).catch(() => {
+        UI.showToast('vocabToast', 'Failed to copy to clipboard.', 'error');
+      });
+    },
+    exportTSV: () => {
+      const list = VocabManager.getSaved();
+      if (list.length === 0) { UI.showToast('vocabToast', 'No data to export.', 'error'); return; }
+
+      const clean = str => (str || '').replace(/[\r\n]/g, ' ').trim();
+      let rows = [["Phrase", "POS", "IPA", "CEFR", "Translation", "Definition", "Synonyms", "Collocation", "Anki Sentence (EN)", "Anki Sentence (JA)", "Source"].join('\t')];
+
+      list.forEach(item => {
+        const rowCols = [
+          item.phrase || '', item.pos || '', item.ipa || '', item.cefr || '',
+          item.trans || '', item.definition || '', item.syn || '', item.collocation || '',
+          item.anki_sentence_en || '', item.anki_sentence_ja || '', item.source || ''
+        ].map(val => clean(val));
+        rows.push(rowCols.join('\t'));
+      });
+
+      navigator.clipboard.writeText(rows.join('\n')).then(() => {
+        UI.showToast('vocabToast', 'Full TSV (11 columns) copied to clipboard! ✨', 'success');
+      }).catch(() => {
+        UI.showToast('vocabToast', 'Failed to copy to clipboard.', 'error');
+      });
+    }
+  };
+
+  /* HISTORY & LIBRARY MANAGER */
+  const HistoryManager = {
+    activeTab: 'recent',
+    currentEditingKey: null,
+    pendingDeleteKey: null,
+    inMemoryCache: [],
+
+    loadIntoMemory: async () => {
+      try {
+        let rawList = await DB.getAll(STORE_CACHE);
+        const map = new Map();
+        for (const item of rawList) {
+          const textKey = item.originalText ? Utils.getCacheKey(item.originalText) : item.key;
+          if (!map.has(textKey)) {
+            map.set(textKey, item);
+          } else {
+            const existing = map.get(textKey);
+            const merged = {
+              ...item,
+              ...existing,
+              isPinned: Boolean(existing.isPinned || item.isPinned),
+              title: (existing.title && existing.title.trim() !== '') ? existing.title : (item.title || ''),
+              timestamp: Math.max(existing.timestamp || 0, item.timestamp || 0),
+              key: textKey
+            };
+            if (existing.key !== textKey) {
+              await DB.delete(STORE_CACHE, existing.key);
+            }
+            if (item.key !== textKey) {
+              await DB.delete(STORE_CACHE, item.key);
+            }
+            map.set(textKey, merged);
+            await DB.set(STORE_CACHE, merged);
+          }
+        }
+        HistoryManager.inMemoryCache = Array.from(map.values());
+      } catch (e) { HistoryManager.inMemoryCache = []; }
+    },
+    getCachedPayload: async (fullText) => {
+      try {
+        const key = Utils.getCacheKey(fullText);
+        let item = await DB.get(STORE_CACHE, key);
+        if (item) {
+          item.timestamp = Date.now();
+          await DB.set(STORE_CACHE, item);
+          return item;
+        }
+        return null;
+      } catch (e) { return null; }
+    },
+    setCachedPayload: async (fullText, titleText, isPinned, resultsArray) => {
+      try {
+        const key = Utils.getCacheKey(fullText);
+        let existing = await DB.get(STORE_CACHE, key);
+        let finalPinned = Boolean(isPinned);
+        let finalTitle = titleText || "";
+
+        if (existing) {
+          if (typeof existing.isPinned === 'boolean') finalPinned = existing.isPinned;
+          if (!finalTitle && existing.title) finalTitle = existing.title;
+        }
+
+        const payload = {
+          key: key, timestamp: Date.now(), title: finalTitle,
+          originalText: fullText, isPinned: finalPinned, results: resultsArray
+        };
+        await DB.set(STORE_CACHE, payload);
+        await HistoryManager.cleanOldRecent();
+        return payload;
+      } catch (e) { return null; }
+    },
+    togglePinState: async (key) => {
+      try {
+        let payload = await DB.get(STORE_CACHE, key);
+        if (payload) {
+          payload.isPinned = !payload.isPinned;
+          payload.timestamp = Date.now();
+          await DB.set(STORE_CACHE, payload);
+
+          const pinBtn = document.getElementById('articlePinBtn');
+          if (pinBtn && pinBtn.dataset.key === key) {
+            pinBtn.classList.toggle('pinned', payload.isPinned);
+            pinBtn.title = payload.isPinned ? "Saved in Library (Click to Unpin)" : "Save to Library (Stock)";
+          }
+          await HistoryManager.loadIntoMemory();
+          HistoryManager.renderModalList();
+        }
+      } catch (e) {}
+    },
+    editTitle: async (key) => {
+      try {
+        let payload = await DB.get(STORE_CACHE, key);
+        if (payload) {
+          HistoryManager.currentEditingKey = key;
+          const inputElem = document.getElementById('editTitleInput');
+          if (inputElem) inputElem.value = payload.title || '';
+          UI.openModal('editTitleModal');
+          setTimeout(() => { inputElem?.focus(); }, 100);
+        }
+      } catch (e) {}
+    },
+    executeEditTitle: async () => {
+      if (!HistoryManager.currentEditingKey) return;
+      try {
+        let payload = await DB.get(STORE_CACHE, HistoryManager.currentEditingKey);
+        if (payload) {
+          const newTitle = document.getElementById('editTitleInput')?.value.trim() || '';
+
+          payload.title = newTitle;
+          payload.timestamp = Date.now();
+          await DB.set(STORE_CACHE, payload);
+
+          const activePinBtn = document.getElementById('articlePinBtn');
+          if (activePinBtn && activePinBtn.dataset.key === HistoryManager.currentEditingKey) {
+            const titleElem = document.getElementById('articleTitleText');
+            if (titleElem) {
+              titleElem.innerText = newTitle;
+              titleElem.style.display = newTitle ? 'block' : 'none';
+            }
+          }
+          await HistoryManager.loadIntoMemory();
+          HistoryManager.renderModalList();
+          UI.closeModal('editTitleModal');
+        }
+      } catch (e) {}
+      HistoryManager.currentEditingKey = null;
+    },
+    getAllEntries: () => {
+      return HistoryManager.inMemoryCache.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    },
+    cleanOldRecent: async () => {
+      try {
+        await HistoryManager.loadIntoMemory();
+        const unpinned = HistoryManager.getAllEntries().filter(item => !item.isPinned);
+        if (unpinned.length > MAX_RECENT_COUNT) {
+          for (let i = MAX_RECENT_COUNT; i < unpinned.length; i++) {
+            await DB.delete(STORE_CACHE, unpinned[i].key);
+          }
+        }
+      } catch (e) {}
+    },
+    promptDelete: key => {
+      HistoryManager.pendingDeleteKey = key;
+      UI.openModal('deleteHistoryConfirmModal');
+    },
+    executeDelete: async () => {
+      if (!HistoryManager.pendingDeleteKey) return;
+      try {
+        await DB.delete(STORE_CACHE, HistoryManager.pendingDeleteKey);
+        await HistoryManager.loadIntoMemory();
+        HistoryManager.renderModalList();
+      } catch (e) {}
+      HistoryManager.pendingDeleteKey = null;
+      UI.closeModal('deleteHistoryConfirmModal');
+    },
+    clearCurrentTab: async () => {
+      await HistoryManager.loadIntoMemory();
+      const filtered = HistoryManager.getAllEntries().filter(item => HistoryManager.activeTab === 'saved' ? item.isPinned : !item.isPinned);
+      const tabName = HistoryManager.activeTab === 'saved' ? 'Saved Library' : 'Recent History';
+
+      if (filtered.length === 0) {
+        UI.showToast('historyToast', `${tabName} is already empty.`, 'error');
+        return;
+      }
+
+      const titleEl = document.getElementById('clearHistoryModalTitle');
+      const descEl = document.getElementById('clearHistoryModalDesc');
+      if (titleEl) titleEl.innerText = HistoryManager.activeTab === 'saved' ? '⚠️ Clear All Saved?' : '⚠️ Clear Recent History?';
+      if (descEl) descEl.innerText = HistoryManager.activeTab === 'saved' 
+        ? 'Are you sure you want to delete all saved articles from your library? This action cannot be undone.'
+        : 'Are you sure you want to delete all recent history? This action cannot be undone.';
+
+      UI.openModal('clearHistoryConfirmModal');
+    },
+    executeClearAll: async () => {
+      await HistoryManager.loadIntoMemory();
+      for (const item of HistoryManager.getAllEntries()) {
+        if ((HistoryManager.activeTab === 'saved' && item.isPinned) || (HistoryManager.activeTab === 'recent' && !item.isPinned)) {
+          await DB.delete(STORE_CACHE, item.key);
+        }
+      }
+      await HistoryManager.loadIntoMemory();
+      HistoryManager.renderModalList();
+      UI.closeModal('clearHistoryConfirmModal');
+      const tabName = HistoryManager.activeTab === 'saved' ? 'Saved Library' : 'Recent History';
+      UI.showToast('historyToast', `All items in ${tabName} have been cleared. ✨`, 'success');
+    },
+    openModal: async () => {
+      const toast = document.getElementById('historyToast');
+      if (toast) toast.style.display = 'none';
+      await HistoryManager.loadIntoMemory();
+      HistoryManager.activeTab = 'recent';
+      HistoryManager.switchTab('recent');
+      UI.openModal('historyModal');
+    },
+    switchTab: tab => {
+      const toast = document.getElementById('historyToast');
+      if (toast) toast.style.display = 'none';
+      HistoryManager.activeTab = tab;
+      document.getElementById('tabRecentBtn').classList.toggle('active', tab === 'recent');
+      document.getElementById('tabSavedBtn').classList.toggle('active', tab === 'saved');
+      document.getElementById('clearHistoryBtn').innerText = tab === 'saved' ? 'Clear All Saved' : 'Clear Recent';
+      HistoryManager.renderModalList();
+    },
+    renderModalList: () => {
+      const filtered = HistoryManager.getAllEntries().filter(item => HistoryManager.activeTab === 'saved' ? item.isPinned : !item.isPinned);
+      const body = document.getElementById('historyListBody');
+
+      if (filtered.length === 0) {
+        const msg = HistoryManager.activeTab === 'saved' ? 'No saved articles yet.<br>Tap 📌 on top of any generated article to save it.' : 'No recent history.';
+        body.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 30px 0;">${msg}</div>`;
+        return;
+      }
+
+      body.innerHTML = '';
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'history-card';
+
+        const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('ja-JP', { 
+          year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false 
+        }) : '';
+
+        const isPinnedActive = (HistoryManager.activeTab === 'saved') || Boolean(item.isPinned);
+        
+        const hasError = Array.isArray(item.results) && item.results.some(r => !r || r.error || !r.parsed);
+        const displayTitle = (hasError ? '⚠️ ' : '') + Utils.escapeHtml(item.title || item.originalText || "Untitled");
+
+        card.innerHTML = `
+          <div class="history-card-header">
+            <span>📅 ${dateStr}</span>
+            <div>
+              <button class="vocab-card-btn ${isPinnedActive ? 'pinned' : ''}" onclick="event.stopPropagation(); HistoryManager.togglePinState('${item.key}')" title="Toggle Pin">📌</button>
+              <button class="vocab-card-btn" onclick="event.stopPropagation(); HistoryManager.editTitle('${item.key}')" title="Edit Title">✏️</button>
+              <button class="vocab-card-btn" onclick="event.stopPropagation(); HistoryManager.promptDelete('${item.key}')" title="Delete">🗑</button>
+            </div>
+          </div>
+          <div class="history-title-row">
+            <div class="history-title">${displayTitle}</div>
+          </div>
+          <div class="history-card-preview">${Utils.escapeHtml(item.originalText)}</div>
+          <div class="history-card-footer">
+            <span class="history-badge">📊 ${Utils.countWords(item.originalText).toLocaleString('en-US')} words</span>
+            <span style="font-size: 0.78rem; color: var(--accent); font-weight: 600;">Tap to load ➔</span>
+          </div>
+        `;
+
+        card.onclick = async () => {
+          UI.closeModal('historyModal');
+          document.getElementById('inputTitle').value = item.title || '';
+          document.getElementById('inputText').value = item.originalText;
+          App.updateInputWordCount();
+          App.processText();
+        };
+        body.appendChild(card);
+      });
+    }
+  };
+
+  /* DATA SYNC & SETTINGS MANAGER */
+  const SyncManager = {
+    initApiKeyInput: () => {
+      const input = document.getElementById('apiKeyInput');
+      if (input) {
+        input.value = localStorage.getItem('lingualens_apikey') || '';
+      }
+    },
+    saveApiKey: () => {
+      const input = document.getElementById('apiKeyInput');
+      if (!input) return;
+      const val = input.value.trim();
+      if (val) {
+        localStorage.setItem('lingualens_apikey', val);
+        UI.setSyncStatus('Gemini API key saved successfully! ✨', 'success');
+      } else {
+        localStorage.removeItem('lingualens_apikey');
+        UI.setSyncStatus('API key cleared.', 'success');
+      }
+    },
+    clearApiKey: () => {
+      const input = document.getElementById('apiKeyInput');
+      if (input) input.value = '';
+      localStorage.removeItem('lingualens_apikey');
+      UI.setSyncStatus('API key removed from local storage.', 'success');
+    },
+    copyFullJSON: async () => {
+      const exportBtn = document.getElementById('exportSyncBtn');
+      if (exportBtn) { exportBtn.disabled = true; exportBtn.innerText = '⏳ Exporting Data...'; }
+      UI.setSyncStatus('⏳ Exporting data...', 'normal');
+      try {
+        await VocabManager.loadIntoMemory();
+        await HistoryManager.loadIntoMemory();
+        const payload = { version: "1.0", timestamp: Date.now(), vocab: VocabManager.getSaved(), history: HistoryManager.getAllEntries() };
+        const str = JSON.stringify(payload, null, 2);
+
+        await navigator.clipboard.writeText(str);
+        UI.setSyncStatus('Full Sync Data copied to clipboard! ✨', 'success');
+      } catch (e) {
+        const str = JSON.stringify({ version: "1.0", timestamp: Date.now(), vocab: VocabManager.getSaved(), history: HistoryManager.getAllEntries() }, null, 2);
+        document.getElementById('syncDataInput').value = str;
+        UI.setSyncStatus('Text copied into input box below.', 'success');
+      } finally {
+        if (exportBtn) { exportBtn.disabled = false; exportBtn.innerText = '📋 Copy Full Sync Data'; }
+      }
+    },
+    processTextImport: async () => {
+      const input = document.getElementById('syncDataInput').value.trim();
+      const importBtn = document.getElementById('importSyncBtn');
+      if (!input) { 
+        UI.setSyncStatus('Please paste the sync text first.', 'error'); 
+        return; 
+      }
+
+      if (importBtn) { importBtn.disabled = true; importBtn.innerText = '⏳ Merging Data...'; }
+      UI.setSyncStatus('⏳ Starting sync process...', 'normal');
+
+      try {
+        const fileData = JSON.parse(input);
+        
+        UI.setSyncStatus('⏳ Parsing and merging vocabulary...', 'normal');
+        const mergedVocabCount = await SyncManager.mergeVocab(fileData.vocab || fileData.wordbook || []);
+        
+        UI.setSyncStatus('⏳ Merging reading history...', 'normal');
+        const mergedHistoryCount = await SyncManager.mergeHistory(fileData.history || fileData.articles || []);
+
+        VocabManager.updateCount();
+        await HistoryManager.loadIntoMemory();
+        HistoryManager.renderModalList();
+
+        UI.setSyncStatus(`Sync Complete! ✨ (New Vocab: ${mergedVocabCount}, New History: ${mergedHistoryCount})`, 'success');
+        document.getElementById('syncDataInput').value = '';
+      } catch (e) {
+        UI.setSyncStatus(`⚠️ Sync Failed: ${e.message || 'Invalid JSON format.'}`, 'error');
+      } finally {
+        if (importBtn) { importBtn.disabled = false; importBtn.innerText = '✨ Merge & Update Data'; }
+      }
+    },
+    mergeVocab: async fileVocabList => {
+      if (!Array.isArray(fileVocabList)) return 0;
+      await VocabManager.loadIntoMemory();
+      const localVocab = VocabManager.getSaved();
+      const initialCount = localVocab.length;
+      const combined = [...localVocab, ...fileVocabList];
+      await VocabManager.saveList(combined);
+      return Math.max(0, combined.length - initialCount);
+    },
+    mergeHistory: async fileHistoryList => {
+      if (!Array.isArray(fileHistoryList)) return 0;
+      let addedCount = 0;
+
+      for (const fileItem of fileHistoryList) {
+        if (!fileItem.originalText) continue;
+        const key = Utils.getCacheKey(fileItem.originalText);
+        fileItem.key = key;
+
+        let localItem = await DB.get(STORE_CACHE, key);
+        if (!localItem) {
+          await DB.set(STORE_CACHE, fileItem);
+          addedCount++;
+        } else {
+          try {
+            const mergedItem = {
+              ...localItem,
+              ...fileItem,
+              key: key,
+              isPinned: Boolean(localItem.isPinned || fileItem.isPinned),
+              title: (localItem.title && localItem.title.trim() !== '') ? localItem.title : (fileItem.title || ''),
+              timestamp: Math.max(localItem.timestamp || 0, fileItem.timestamp || 0)
+            };
+            await DB.set(STORE_CACHE, mergedItem);
+          } catch (e) {}
+        }
+      }
+
+      await HistoryManager.cleanOldRecent();
+      return addedCount;
+    }
+  };
+
+  /* MAIN APP LOGIC & RENDERING */
+  const App = {
+    hasActiveContent: false,
+    isProcessingState: false,
+    isShowAllPreToggled: false,
+    currentAbortController: null,
+    backgroundRepairRunning: false,
+
+    updateInputWordCount: () => {
+      const inputTextElem = document.getElementById('inputText');
+      const labelElem = document.getElementById('inputTextLabel');
+      if (inputTextElem && labelElem) {
+        const count = Utils.countWords(inputTextElem.value);
+        labelElem.innerText = `Input Text (${count} words)`;
+      }
+    },
+
+    getApiKey: () => {
+      if (GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_API_KEY_HERE") return GEMINI_API_KEY;
+      return localStorage.getItem('lingualens_apikey') || "";
+    },
+    setConvertButtonState: state => {
+      const btn = document.getElementById('convertBtn');
+
+      if (state === 'generating') {
+        App.isProcessingState = true;
+        if (btn) { btn.disabled = true; btn.innerText = 'Generating...'; }
+      } else if (state === 'regenerating') {
+        App.isProcessingState = true;
+        if (btn) { btn.disabled = true; btn.innerText = 'Re-generating...'; }
+      } else if (state === 'ready_regenerate') {
+        App.isProcessingState = false;
+        if (btn) { btn.disabled = false; btn.innerText = 'Re-Generate LinguaLens'; }
+        App.hasActiveContent = true;
+      } else {
+        App.isProcessingState = false;
+        if (btn) { btn.disabled = false; btn.innerText = 'Generate LinguaLens'; }
+        App.hasActiveContent = false;
+      }
+    },
+    handleGenerateAction: () => {
+      if (App.hasActiveContent) {
+        App.processTextWithForceRefresh();
+      } else {
+        App.processText();
+      }
+    },
+    toggleShowAllTranslations: () => {
+      const showAllBtn = document.getElementById('showAllTransBtn');
+      const newState = showAllBtn ? !showAllBtn.classList.contains('active') : !App.isShowAllPreToggled;
+      App.isShowAllPreToggled = newState;
+
+      if (showAllBtn) {
+        showAllBtn.classList.toggle('active', newState);
+      }
+
+      document.querySelectorAll('.sentence-translation-card').forEach(card => card.classList.toggle('open', newState));
+      document.querySelectorAll('.sentence-trans-btn').forEach(btn => btn.classList.toggle('active', newState));
+    },
+    checkShowAllSyncState: () => {
+      const showAllBtn = document.getElementById('showAllTransBtn');
+      if (!showAllBtn) return;
+
+      const transCards = document.querySelectorAll('.sentence-translation-card');
+      if (transCards.length === 0) {
+        showAllBtn.classList.toggle('active', App.isShowAllPreToggled);
+        return;
+      }
+
+      let allOpen = true;
+      transCards.forEach(card => { if (!card.classList.contains('open')) allOpen = false; });
+      showAllBtn.classList.toggle('active', allOpen);
+      App.isShowAllPreToggled = allOpen;
+    },
+    appendBackToTopButton: container => {
+      if (!container || container.querySelector('.back-to-top-container')) return;
+
+      const topLinkContainer = document.createElement('div');
+      topLinkContainer.className = 'back-to-top-container';
+
+      const topBtn = document.createElement('button');
+      topBtn.className = 'action-sm-btn';
+      topBtn.innerText = '↑ Back to Top';
+      topBtn.onclick = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      topLinkContainer.appendChild(topBtn);
+      container.appendChild(topLinkContainer);
+    },
+    parseExactParagraphs: (fullText, maxChars = 500) => {
+      const rawParagraphs = fullText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+      const chunks = [];
+      let currentChunk = [];
+      let currentLen = 0;
+
+      rawParagraphs.forEach(para => {
+        let protectedPara = para
+          .replace(/\b(Inc|Corp|Co|Ltd|Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e)\./gi, '$1___DOT___')
+          .replace(/\b([A-Z])\.([A-Z])\./g, '$1___DOT___$2___DOT___')
+          .replace(/\b([A-Z])\./g, '$1___DOT___');
+
+        if (protectedPara.length > maxChars) {
+          if (currentChunk.length > 0) { chunks.push(currentChunk); currentChunk = []; currentLen = 0; }
+          const rawSentences = protectedPara.match(/[^.!?]+[.!?]*(\s|$)/g) || [protectedPara];
+          let subSentences = [];
+          let subLen = 0;
+
+          rawSentences.forEach((sent, idx) => {
+            const restoredSent = sent.replace(/___DOT___/g, '.');
+            if (subLen + restoredSent.length > maxChars && subSentences.length > 0) {
+              chunks.push([{ text: subSentences.join("").trim(), isParagraphEnd: idx === rawSentences.length - 1 }]);
+              subSentences = []; subLen = 0;
+            }
+            subSentences.push(restoredSent);
+            subLen += restoredSent.length;
+          });
+          if (subSentences.length > 0) chunks.push([{ text: subSentences.join("").trim(), isParagraphEnd: true }]);
+        } else {
+          const restoredPara = protectedPara.replace(/___DOT___/g, '.');
+          if (currentLen + restoredPara.length > maxChars && currentChunk.length > 0) {
+            chunks.push(currentChunk); currentChunk = []; currentLen = 0;
+          }
+          currentChunk.push({ text: restoredPara, isParagraphEnd: true });
+          currentLen += restoredPara.length;
+        }
+      });
+
+      if (currentChunk.length > 0) chunks.push(currentChunk);
+      return chunks;
+    },
+    checkAndDisplayCompletionStatus: (resultsArray, text, apiKey, isShortText, chunkStructure, renderSectionAtFunc) => {
+      const failedIndices = [];
+      resultsArray.forEach((r, idx) => {
+        if (!r || r.error || !r.parsed) failedIndices.push(idx);
+      });
+
+      if (failedIndices.length > 0) {
+        UI.updateStatusBar(`⚠️ ${failedIndices.length} section${failedIndices.length > 1 ? 's' : ''} failed`, true, 0, async () => {
+          await App.executeBatchRetry(failedIndices, resultsArray, text, apiKey, isShortText, chunkStructure, renderSectionAtFunc);
+        });
+      } else {
+        UI.updateStatusBar("✅ Complete!", true, 1500);
+      }
+    },
+    executeBatchRetry: async (failedIndices, resultsArray, text, apiKey, isShortText, chunkStructure, renderSectionAtFunc) => {
+      if (App.currentAbortController) App.currentAbortController.abort();
+      App.currentAbortController = new AbortController();
+      const signal = App.currentAbortController.signal;
+
+      const capturedText = text;
+      const capturedTitle = document.getElementById('inputTitle')?.value.trim() || '';
+      const currentPinState = document.getElementById('articlePinBtn')?.classList.contains('pinned') || false;
+
+      let completedRetryCount = 0;
+      const totalRetry = failedIndices.length;
+
+      UI.updateStatusBar(`⏳ Retrying... (0/${totalRetry})`, true);
+
+      for (const idx of failedIndices) {
+        if (signal.aborted) break;
+        const fullChunkText = chunkStructure[idx] ? chunkStructure[idx].map(p => p.text).join("\n\n") : '';
+        try {
+          const parsed = await App.fetchChunkAnalysisWithRetry(fullChunkText, apiKey, isShortText, 3, signal);
+          resultsArray[idx] = (parsed && Array.isArray(parsed)) ? { parsed } : { error: 'Invalid response format' };
+        } catch (err) {
+          if (err.name === 'AbortError' || signal.aborted) break;
+          resultsArray[idx] = { error: err.message || String(err) };
+        }
+
+        completedRetryCount++;
+        UI.updateStatusBar(`⏳ Retrying... (${completedRetryCount}/${totalRetry})`, true);
+
+        await HistoryManager.setCachedPayload(capturedText, capturedTitle, currentPinState, resultsArray);
+        renderSectionAtFunc(idx);
+      }
+
+      if (!signal.aborted) {
+        App.checkAndDisplayCompletionStatus(resultsArray, capturedText, apiKey, isShortText, chunkStructure, renderSectionAtFunc);
+      }
+    },
+    processText: async () => {
+      if (App.currentAbortController) App.currentAbortController.abort();
+      App.currentAbortController = new AbortController();
+      const signal = App.currentAbortController.signal;
+
+      const apiKey = App.getApiKey();
+      const rawText = document.getElementById('inputText').value.trim();
+      let userTitle = document.getElementById('inputTitle').value.trim();
+      const isTranscriptMode = document.getElementById('transcriptModeCheckbox').checked;
+      const outputDiv = document.getElementById('output');
+
+      if (!apiKey) {
+        alert('Please set your Gemini API key in Data Sync & Settings.');
+        UI.openModal('directSyncModal');
+        return;
+      }
+      if (!rawText) { alert('Please enter some text to transform.'); return; }
+
+      outputDiv.innerHTML = '<div class="loading">Generating interactive LinguaLens content...</div>';
+      App.setConvertButtonState('generating');
+
+      try {
+        let text = rawText;
+        const isShortText = Utils.countWords(text) <= SHORT_TEXT_THRESHOLD_WORDS;
+
+        let cachedPayload = await HistoryManager.getCachedPayload(text);
+        if (!cachedPayload && isTranscriptMode) {
+          UI.updateStatusBar("⏳ Cleaning transcript...", true);
+          text = await App.cleanTranscript(rawText, apiKey, signal);
+          if (signal.aborted) return;
+          document.getElementById('inputText').value = text;
+          App.updateInputWordCount();
+          cachedPayload = await HistoryManager.getCachedPayload(text);
+        }
+
+        if (cachedPayload && cachedPayload.results) {
+          let activeTitle = userTitle || cachedPayload.title || "";
+          if (activeTitle) {
+            document.getElementById('inputTitle').value = activeTitle;
+          }
+          const itemKey = Utils.getCacheKey(text);
+          outputDiv.innerHTML = '';
+          App.renderOutputControls(outputDiv, text, activeTitle, itemKey, cachedPayload.isPinned);
+
+          const contentContainer = document.createElement('div');
+          contentContainer.id = 'content-blocks';
+          outputDiv.appendChild(contentContainer);
+
+          const chunkStructure = App.parseExactParagraphs(text, 500);
+          if (cachedPayload.results.length === chunkStructure.length) {
+            App.renderCachedResults(contentContainer, cachedPayload.results, text, apiKey, isShortText, chunkStructure);
+            App.appendBackToTopButton(contentContainer);
+
+            await HistoryManager.setCachedPayload(text, activeTitle, cachedPayload.isPinned, cachedPayload.results);
+            App.setConvertButtonState('ready_regenerate');
+            return;
+          }
+        }
+
+        if (isTranscriptMode && text === rawText) {
+          UI.updateStatusBar("⏳ Cleaning transcript...", true);
+          text = await App.cleanTranscript(rawText, apiKey, signal);
+          if (signal.aborted) return;
+          document.getElementById('inputText').value = text;
+          App.updateInputWordCount();
+        }
+
+        if (!userTitle && !isShortText) {
+          UI.updateStatusBar("⏳ Analyzing title...", true);
+          userTitle = await App.fetchTitle(text, apiKey, signal);
+          if (signal.aborted) return;
+          if (userTitle) {
+            document.getElementById('inputTitle').value = userTitle;
+          }
+        }
+
+        await App.processFullMode(text, userTitle, apiKey, outputDiv, signal);
+      } catch (err) {
+        if (err.name === 'AbortError' || signal.aborted) return;
+        UI.updateStatusBar("⚠️ Analysis Error", true);
+        outputDiv.innerHTML = `<div style="color: #b94b29; font-size:0.95rem;">Error: ${Utils.escapeHtml(err.message)}</div>`;
+        App.setConvertButtonState('normal');
+      }
+    },
+    processTextWithForceRefresh: async () => {
+      if (App.currentAbortController) App.currentAbortController.abort();
+      App.currentAbortController = new AbortController();
+      const signal = App.currentAbortController.signal;
+
+      const apiKey = App.getApiKey();
+      const rawText = document.getElementById('inputText').value.trim();
+      let userTitle = document.getElementById('inputTitle').value.trim();
+      const isTranscriptMode = document.getElementById('transcriptModeCheckbox').checked;
+      const outputDiv = document.getElementById('output');
+
+      if (!apiKey) {
+        alert('Please set your Gemini API key in Data Sync & Settings.');
+        UI.openModal('directSyncModal');
+        return;
+      }
+      if (!rawText) { alert('Please enter some text to transform.'); return; }
+
+      outputDiv.innerHTML = '<div class="loading">Re-generating with latest rules...</div>';
+      App.setConvertButtonState('regenerating');
+
+      try {
+        let text = rawText;
+        const isShortText = Utils.countWords(text) <= SHORT_TEXT_THRESHOLD_WORDS;
+
+        if (isTranscriptMode) {
+          UI.updateStatusBar("⏳ Cleaning transcript...", true);
+          text = await App.cleanTranscript(rawText, apiKey, signal);
+          if (signal.aborted) return;
+          document.getElementById('inputText').value = text;
+          App.updateInputWordCount();
+        }
+
+        if (!userTitle && !isShortText) {
+          UI.updateStatusBar("⏳ Analyzing title...", true);
+          userTitle = await App.fetchTitle(text, apiKey, signal);
+          if (signal.aborted) return;
+          if (userTitle) {
+            document.getElementById('inputTitle').value = userTitle;
+          }
+        }
+
+        await App.processFullMode(text, userTitle, apiKey, outputDiv, signal);
+      } catch (err) {
+        if (err.name === 'AbortError' || signal.aborted) return;
+        UI.updateStatusBar("⚠️ Analysis Error", true);
+        outputDiv.innerHTML = `<div style="color: #b94b29; font-size:0.95rem;">Error: ${Utils.escapeHtml(err.message)}</div>`;
+        App.setConvertButtonState('ready_regenerate');
+      }
+    },
+    cleanTranscript: async (rawText, apiKey, signal) => {
+      const prompt = `You are a professional text editor. Clean up the following raw automatic speech recognition (ASR) transcript.
+Rules:
+1. Remove all timestamps (e.g., 12:34).
+ 2. Remove bracketed noise tags (e.g., [Music], [Applause]).
+3. Remove conversational fillers (e.g., "uh", "um").
+4. Correct obvious ASR misspellings based on context.
+5. Output ONLY the cleaned plain text.
+
+Raw Transcript:
+${rawText}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } }),
+          signal
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.candidates[0].content.parts[0].text.trim() || rawText;
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
+      return rawText;
+    },
+    fetchTitle: async (fullText, apiKey, signal) => {
+      const prompt = `Read the following English text and create a concise, informative ENGLISH title (3 to 8 words) summarizing the main topic. Output ONLY the plain text title without quotes.
+
+Text:
+${fullText.slice(0, 1500)}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } }),
+          signal
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '') || "";
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
+      return "";
+    },
+    processFullMode: async (text, userTitle, apiKey, outputDiv, signal) => {
+      const chunkStructure = App.parseExactParagraphs(text, 500);
+      const itemKey = Utils.getCacheKey(text);
+      const isShortText = Utils.countWords(text) <= SHORT_TEXT_THRESHOLD_WORDS;
+
+      let existingPinned = false;
+      try {
+        let existingObj = await DB.get(STORE_CACHE, itemKey);
+        if (existingObj) existingPinned = Boolean(existingObj.isPinned);
+      } catch (e) {}
+
+      const capturedText = text;
+      const capturedTitle = userTitle;
+      const capturedPinned = existingPinned;
+
+      outputDiv.innerHTML = '';
+      App.renderOutputControls(outputDiv, capturedText, capturedTitle, itemKey, capturedPinned);
+
+      const contentContainer = document.createElement('div');
+      contentContainer.id = 'content-blocks';
+      outputDiv.appendChild(contentContainer);
+
+      const results = new Array(chunkStructure.length);
+      await HistoryManager.setCachedPayload(capturedText, capturedTitle, capturedPinned, results);
+
+      let completedCount = 0;
+      UI.updateStatusBar(`⏳ Analyzing... (0/${chunkStructure.length})`, true);
+
+      function renderSectionAt(index) {
+        let blockElem = document.getElementById(`p-block-${index}`);
+        if (!blockElem) {
+          blockElem = document.createElement('div');
+          blockElem.id = `p-block-${index}`;
+          blockElem.className = 'paragraph-block';
+
+          const allBlocks = contentContainer.querySelectorAll('.paragraph-block');
+          if (allBlocks.length > index) {
+            contentContainer.insertBefore(blockElem, allBlocks[index]);
+          } else {
+            contentContainer.appendChild(blockElem);
+          }
+        }
+
+        const item = results[index];
+        blockElem.innerHTML = '';
+
+        if (!item || item.error || !item.parsed || !Array.isArray(item.parsed)) {
+          const retryBox = document.createElement('div');
+          retryBox.className = 'section-retry-box';
+          retryBox.innerHTML = `
+            <span>⚠️ Section ${index + 1} failed to load</span>
+            <button class="action-sm-btn" style="color:#b94b29; border-color:#b94b29; font-weight:600;">🔄 Retry</button>
+          `;
+          retryBox.querySelector('button').onclick = async () => {
+            retryBox.querySelector('button').innerText = '⏳ Retrying...';
+            const fullChunkText = chunkStructure[index].map(p => p.text).join("\n\n");
+            try {
+              const parsed = await App.fetchChunkAnalysisWithRetry(fullChunkText, apiKey, isShortText);
+              results[index] = (parsed && Array.isArray(parsed)) ? { parsed } : { error: 'Invalid response format' };
+            } catch (err) {
+              results[index] = { error: err.message || String(err) };
+            }
+            const activeTitle = document.getElementById('inputTitle')?.value.trim() || capturedTitle;
+            await HistoryManager.setCachedPayload(capturedText, activeTitle, capturedPinned, results);
+            renderSectionAt(index);
+
+            App.checkAndDisplayCompletionStatus(results, capturedText, apiKey, isShortText, chunkStructure, renderSectionAt);
+          };
+          blockElem.appendChild(retryBox);
+        } else {
+          App.renderSentenceBlocks(blockElem, item.parsed);
+        }
+      }
+
+      let indexCursor = 0;
+      async function worker() {
+        while (indexCursor < chunkStructure.length && !signal.aborted) {
+          const currentIndex = indexCursor++;
+          const fullChunkText = chunkStructure[currentIndex].map(p => p.text).join("\n\n");
+          try {
+            const parsed = await App.fetchChunkAnalysisWithRetry(fullChunkText, apiKey, isShortText, 3, signal);
+            if (signal.aborted) break;
+            results[currentIndex] = (parsed && Array.isArray(parsed)) ? { parsed } : { error: 'Invalid response format' };
+          } catch (err) {
+            if (err.name === 'AbortError' || signal.aborted) break;
+            results[currentIndex] = { error: err.message || String(err) };
+          }
+
+          if (signal.aborted) break;
+          completedCount++;
+          UI.updateStatusBar(`⏳ Analyzing... (${completedCount}/${chunkStructure.length})`, true);
+          const activeTitle = document.getElementById('inputTitle')?.value.trim() || capturedTitle;
+          await HistoryManager.setCachedPayload(capturedText, activeTitle, capturedPinned, results);
+          renderSectionAt(currentIndex);
+        }
+      }
+
+      const workers = [];
+      for (let i = 0; i < Math.min(2, chunkStructure.length); i++) workers.push(worker());
+      await Promise.all(workers);
+
+      if (signal.aborted) return;
+
+      App.appendBackToTopButton(contentContainer);
+      App.checkAndDisplayCompletionStatus(results, capturedText, apiKey, isShortText, chunkStructure, renderSectionAt);
+      App.setConvertButtonState('ready_regenerate');
+    },
+    fetchChunkAnalysisWithRetry: async (fullChunkText, apiKey, isShortText = false, retries = 3, signal = null) => {
+      try {
+        return await App.fetchChunkAnalysis(fullChunkText, apiKey, isShortText, signal);
+      } catch (err) {
+        if (err.name === 'AbortError' || (signal && signal.aborted)) throw err;
+        const errStr = String(err).toLowerCase();
+        if (retries > 0 && (errStr.includes('quota') || errStr.includes('429') || errStr.includes('resource_exhausted'))) {
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(resolve, (4 - retries + 1) * 4000);
+            if (signal) {
+              signal.addEventListener('abort', () => {
+                clearTimeout(timer);
+                reject(new DOMException('Aborted', 'AbortError'));
+              }, { once: true });
+            }
+          });
+          if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
+          return await App.fetchChunkAnalysisWithRetry(fullChunkText, apiKey, isShortText, retries - 1, signal);
+        }
+        throw err;
+      }
+    },
+    fetchChunkAnalysis: async (chunkText, apiKey, isShortText = false, signal = null) => {
+      const commonRules = `
+【最重要：全英文単語の100%完全網羅・カバー率必須ルール】
+- "sentence_en" に含まれるすべての単語・記号は、漏れなく100% "chunks" のいずれかの要素（"en"）に分配・保持されること。途中でフレーズや単語を切り落としたり、出力を省略することは絶対に禁止。
+
+【最重要：文末の句読点（ピリオド等）の絶対維持ルール】
+- 原文にあるすべての文末のピリオド（.）、感嘆符（!）、疑問符（?）を一切省略せず、"sentence_en" および最後のチャンクの末尾に必ず完全に出力・維持すること。
+
+【フレーズ分割（chunks）のガイドライン（スラッシュリーディング基準）】
+- 各文を「スラッシュリーディング（意味のまとまり単位）」に基づいて適切な長さに分割すること。
+- 【絶対禁止事項】単語1語ごとの過度な細分化（例: "He / went / to / the / store" のような単語単位の分割は絶対に禁止）。
+- 【長大ブロックの禁止】1つのチャンクが文全体のように長大になりすぎず、前置詞句、副詞節、主語・動詞・目的語などの意味上の塊（通常2〜6単語程度の自然なフレーズ単位）ごとに分割すること。
+
+【サブアイテム（sub_items）の絶対厳選・抽出ルール】
+1. 【最優先義務】解説（"note"）内に登場・言及されているフレーズ、定型表現、イIdiom、句動詞、コロケーションなどは、例外なく100%すべてサブアイテムとして個別に登録すること。
+ 2. 【重要度と難易度に基づく網羅】
+    - 単に「A1/A2だから」という理由だけで基礎単語を一律に除外しないこと。文脈によって意味が取り違えやすい語や、そのチャンクの理解に不可欠な核となる語は積極的に抽出すること。
+    - ただし、冠詞（a, the）や代名詞（it, they）など、単なる文法上の機能語は除外する。
+3. 【禁止事項】解説内で言及された複合表現や句動詞を勝手にバラバラの単語に分解して登録する行為の厳禁。必ず辞書的ヘッドワードの形（まとまったフレーズまたは原型）で登録すること。
+4. 【最大件数制限】1つのチャンク（"chunk"）に登録できるサブアイテム（"sub_items"）の数は、最重要語句に絞り、最大で3件までとすること。
+
+【辞書的ヘッドワード化（正規化）の絶対ルール】
+- すべてのサブアイテムの "phrase" は、辞書の見出し語として最適な形に従うこと。
+  - 動詞はすべて原形（インフィニティブ）にすること。
+  - 名詞は基本的に単数形にするが、【絶対複数名詞・複数形固有の意味を持つ名詞】（例: "premises"［敷地・物件］, "goods"［商品］, "clothes", "customs", "savings" など）は無理に単数形にせず、文脈に合った複数形表記を厳格に維持すること。
+  - 表現・句動詞に含まれる所有格や代名詞は一般的な形（"one's" など）に必ず正規化すること（例: "on one's own"）。
+
+【品詞（"pos"）の厳格な9分類ルール（ピリオド絶対禁止）】
+以下の9つのいずれかだけに完全に一致させること。他の表記やピリオド付き（例: n. 等）は絶対に使用しないこと。
+1. "n"（名詞・複合名詞）
+ 2. "v"（動詞・動詞句）
+3. "phrasal v"（句動詞）
+4. "adj"（形容詞）
+5. "adv"（副詞）
+6. "prep"（前置詞）
+7. "conj"（接続詞）
+8. "phrase"（フレーズ・名詞句コロケーション）
+9. "idiom"（イIdiom）
+
+【訳語と類義語のルール】
+1. 訳語（"trans"）の中に半角カンマ（","）を絶対に入らないこと。複数ある場合は必ずアプリ標準の読点（、）を使用すること。
+ 2. 各サブアイテムの類義語を "syn" にカンマ区切りで記載する（ない場合は ""）。
+`;
+
+      const schema = {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            sentence_en: { type: "STRING" },
+            sentence_ja: { type: "STRING" },
+            chunks: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  en: { type: "STRING" }, ipa: { type: "STRING" }, pos: { type: "STRING" },
+                  ja: { type: "STRING" }, note: { type: "STRING" },
+                  sub_items: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        phrase: { type: "STRING" }, ipa: { type: "STRING" },
+                        pos: { type: "STRING" }, cefr: { type: "STRING" },
+                        trans: { type: "STRING" }, syn: { type: "STRING" }
+                      },
+                      required: ["phrase", "ipa", "pos", "cefr", "trans", "syn"]
+                    }
+                  }
+                },
+                required: ["en", "ipa", "pos", "ja", "note", "sub_items"]
+              }
+            }
+          },
+          required: ["sentence_en", "sentence_ja", "chunks"]
+        }
+      };
+
+      const prompt = `あなたはプロのAI英語講師です。入力英文を文ごとに解析し、文ごとの和訳（"sentence_ja"）とフレーズ群（"chunks"）を出力してください。
+${commonRules}
+入力:
+${chunkText}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0.1 }
+        }),
+        signal
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return JSON.parse(data.candidates[0].content.parts[0].text);
+    },
+    renderOutputControls: (container, fullText, titleText, itemKey, isPinned) => {
+      const articleHeaderDiv = document.createElement('div');
+      articleHeaderDiv.className = 'article-header-container';
+      const hasTitle = titleText && titleText.trim() !== "";
+
+      articleHeaderDiv.innerHTML = `
+        <div id="articleTitleText" class="article-title-text-box" style="${hasTitle ? '' : 'display:none;'}">${Utils.escapeHtml(titleText)}</div>
+        <div class="article-meta-row">
+          <div class="article-meta-left">
+            <button id="articlePinBtn" class="article-pin-btn ${isPinned ? 'pinned' : ''}" data-key="${itemKey}" onclick="HistoryManager.togglePinState('${itemKey}')" title="${isPinned ? 'Saved in Library (Click to Unpin)' : 'Save to Library (Stock)'}">📌</button>
+            <div class="word-count-badge" title="Total Word Count">
+              <span style="color: var(--accent); font-weight: 700;">${Utils.countWords(fullText).toLocaleString('en-US')}</span>
+              <span>words</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 4px; flex-shrink: 0;">
+            <button id="chainPlayBtn" class="chain-play-btn" onclick="AudioManager.toggleChainPlay()" title="Toggle Chain Play Mode">🔈 Chain Play</button>
+            <button id="showAllTransBtn" class="show-all-trans-btn ${App.isShowAllPreToggled ? 'active' : ''}" onclick="App.toggleShowAllTranslations()" title="Show All Sentences Translation">📄 Show All</button>
+          </div>
+        </div>
+      `;
+      container.appendChild(articleHeaderDiv);
+    },
+    renderCachedResults: (container, cachedResults, fullText = '', apiKey = '', isShortText = false, chunkStructure = []) => {
+      function renderSectionAt(index) {
+        let blockElem = document.getElementById(`p-block-${index}`);
+        if (!blockElem) {
+          blockElem = document.createElement('div');
+          blockElem.id = `p-block-${index}`;
+          blockElem.className = 'paragraph-block';
+          container.appendChild(blockElem);
+        }
+
+        const item = cachedResults[index];
+        blockElem.innerHTML = '';
+
+        if (!item || item.error || !item.parsed || !Array.isArray(item.parsed)) {
+          const retryBox = document.createElement('div');
+          retryBox.className = 'section-retry-box';
+          retryBox.innerHTML = `
+            <span>⚠️ Section ${index + 1} failed to load</span>
+            <button class="action-sm-btn" style="color:#b94b29; border-color:#b94b29; font-weight:600;">🔄 Retry</button>
+          `;
+          retryBox.querySelector('button').onclick = async () => {
+            retryBox.querySelector('button').innerText = '⏳ Retrying...';
+            const fullChunkText = chunkStructure[index] ? chunkStructure[index].map(p => p.text).join("\n\n") : '';
+            try {
+              const parsed = await App.fetchChunkAnalysisWithRetry(fullChunkText, apiKey, isShortText);
+              cachedResults[index] = (parsed && Array.isArray(parsed)) ? { parsed } : { error: 'Invalid response format' };
+            } catch (err) {
+              cachedResults[index] = { error: err.message || String(err) };
+            }
+            if (fullText) {
+              const activeTitle = document.getElementById('inputTitle')?.value.trim() || '';
+              const currentPinState = document.getElementById('articlePinBtn')?.classList.contains('pinned') || false;
+              await HistoryManager.setCachedPayload(fullText, activeTitle, currentPinState, cachedResults);
+            }
+            renderSectionAt(index);
+            App.checkAndDisplayCompletionStatus(cachedResults, fullText, apiKey, isShortText, chunkStructure, renderSectionAt);
+          };
+          blockElem.appendChild(retryBox);
+        } else {
+          App.renderSentenceBlocks(blockElem, item.parsed);
+        }
+      }
+
+      cachedResults.forEach((_, index) => {
+        renderSectionAt(index);
+      });
+
+      App.checkAndDisplayCompletionStatus(cachedResults, fullText, apiKey, isShortText, chunkStructure, renderSectionAt);
+    },
+    renderSentenceBlocks: (container, sentenceItems) => {
+      sentenceItems.forEach(sentenceObj => {
+        const currentSentenceBlock = document.createElement('div');
+        currentSentenceBlock.className = 'sentence-block';
+
+        let sentenceTextToPlay = (sentenceObj.sentence_en || "").trim();
+        let sentenceJaTranslation = sentenceObj.sentence_ja || "";
+
+        if (sentenceObj.chunks && Array.isArray(sentenceObj.chunks)) {
+          if (!sentenceTextToPlay) {
+            sentenceTextToPlay = sentenceObj.chunks.map(c => c.en).join(" ").trim();
+          }
+
+          sentenceObj.chunks.forEach(chunk => {
+            currentSentenceBlock.appendChild(App.createPopupSpan(chunk.en, chunk.ja, chunk, sentenceTextToPlay));
+            currentSentenceBlock.appendChild(document.createTextNode(' '));
+          });
+
+          const chunksCombined = sentenceObj.chunks.map(c => c.en).join(" ").trim();
+          if (sentenceTextToPlay && sentenceTextToPlay.length > chunksCombined.length) {
+            const cleanTokens = text => (text.match(/\b[\w'-]+\b/g) || []).map(w => w.toLowerCase());
+            const fullTokens = cleanTokens(sentenceTextToPlay);
+            const chunkTokens = cleanTokens(chunksCombined);
+
+            let matchIndex = 0;
+            fullTokens.forEach(t => {
+              if (matchIndex < chunkTokens.length && t === chunkTokens[matchIndex]) {
+                matchIndex++;
+              }
+            });
+
+            if (matchIndex < fullTokens.length) {
+              const lastChunkToken = chunkTokens[chunkTokens.length - 1];
+              let cutPos = -1;
+              if (lastChunkToken) {
+                const lowerFull = sentenceTextToPlay.toLowerCase();
+                const lastIdx = lowerFull.lastIndexOf(lastChunkToken);
+                if (lastIdx !== -1) {
+                  cutPos = lastIdx + lastChunkToken.length;
+                }
+              }
+
+              let missingText = "";
+              if (cutPos !== -1 && cutPos < sentenceTextToPlay.length) {
+                missingText = sentenceTextToPlay.slice(cutPos);
+              } else {
+                missingText = sentenceTextToPlay.slice(chunksCombined.length);
+              }
+
+              if (missingText && missingText.trim().length > 0) {
+                const fallbackChunk = {
+                  en: missingText.trim(),
+                  ja: "(連動フレーズ)",
+                  pos: "phrase",
+                  note: "",
+                  sub_items: []
+                };
+                currentSentenceBlock.appendChild(App.createPopupSpan(fallbackChunk.en, fallbackChunk.ja, fallbackChunk, sentenceTextToPlay));
+                currentSentenceBlock.appendChild(document.createTextNode(' '));
+              }
+            }
+          }
+
+          if (sentenceTextToPlay) {
+            const lastCharOfFull = sentenceTextToPlay.slice(-1);
+            if (['.', '?', '!'].includes(lastCharOfFull)) {
+              const allSpans = currentSentenceBlock.querySelectorAll('.interactive-span');
+              if (allSpans.length > 0) {
+                const lastSpan = allSpans[allSpans.length - 1];
+                let currentText = lastSpan.childNodes[0]?.nodeValue || lastSpan.innerText || "";
+                currentText = currentText.trim();
+                if (!currentText.endsWith('.') && !currentText.endsWith('?') && !currentText.endsWith('!')) {
+                  if (lastSpan.childNodes[0] && lastSpan.childNodes[0].nodeType === Node.TEXT_NODE) {
+                    lastSpan.childNodes[0].nodeValue = currentText + lastCharOfFull;
+                  } else {
+                    lastSpan.innerText = currentText + lastCharOfFull;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (sentenceTextToPlay) {
+          const btnGroupDiv = document.createElement('div');
+          btnGroupDiv.className = 'sentence-btn-group';
+
+          const playBtn = document.createElement('button');
+          playBtn.className = 'sentence-play-btn';
+          playBtn.innerHTML = '🔊';
+          playBtn.title = 'Play sentence audio';
+          playBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            AudioManager.playTTS(sentenceTextToPlay, playBtn, currentSentenceBlock, false); 
+          };
+          btnGroupDiv.appendChild(playBtn);
+
+          const transBtn = document.createElement('button');
+          transBtn.className = `sentence-trans-btn ${App.isShowAllPreToggled ? 'active' : ''}`;
+          transBtn.innerHTML = '📄';
+          transBtn.title = 'Toggle sentence translation';
+
+          const transCard = document.createElement('div');
+          transCard.className = `sentence-translation-card ${App.isShowAllPreToggled ? 'open' : ''}`;
+          transCard.innerText = sentenceJaTranslation || "(Translation unavailable)";
+
+          transBtn.onclick = (e) => {
+            e.stopPropagation();
+            const isOpen = transCard.classList.contains('open');
+            transCard.classList.toggle('open', !isOpen);
+            transBtn.classList.toggle('active', !isOpen);
+            App.checkShowAllSyncState();
+          };
+
+          btnGroupDiv.appendChild(transBtn);
+          currentSentenceBlock.appendChild(btnGroupDiv);
+          currentSentenceBlock.appendChild(transCard);
+        }
+
+        container.appendChild(currentSentenceBlock);
+      });
+    },
+    createPopupSpan: (mainText, popupTransText, itemObject, contextSentence = '') => {
+      const span = document.createElement('span');
+      span.className = 'interactive-span';
+      span.innerText = mainText;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'popup-bubble';
+
+      const phraseRow = document.createElement('div');
+      phraseRow.className = 'popup-phrase-row';
+
+      const phraseDiv = document.createElement('div');
+      phraseDiv.className = 'popup-phrase';
+      phraseDiv.innerText = mainText;
+      phraseRow.appendChild(phraseDiv);
+
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'popup-btn-group';
+
+      const audioBtn = document.createElement('button');
+      audioBtn.className = 'popup-audio-btn';
+      audioBtn.innerHTML = '🔊';
+      audioBtn.title = 'Play phrase audio';
+      audioBtn.onclick = (e) => { 
+        AudioManager.playPopupBubbleTTS(mainText, e); 
+      };
+      btnGroup.appendChild(audioBtn);
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'popup-add-btn';
+      addBtn.innerText = '+';
+      addBtn.title = 'Add selected text or phrase to vocabulary list';
+
+      let isProcessingAdd = false;
+      const handleAddAction = async (e) => {
+        if (e) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+        if (isProcessingAdd) return;
+
+        let targetPhrase = mainText;
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim() !== '') {
+          targetPhrase = selection.toString().trim();
+        }
+
+        const success = await VocabManager.addManualItem(targetPhrase, contextSentence || mainText);
+        if (success) {
+          isProcessingAdd = true;
+          VocabManager.updateCount();
+          
+          addBtn.innerText = '✓';
+          addBtn.classList.add('added');
+
+          setTimeout(() => {
+            addBtn.innerText = '+';
+            addBtn.classList.remove('added');
+            isProcessingAdd = false;
+          }, 1200);
+
+          UI.showToast('vocabToast', `Added "${targetPhrase}" to Vocabulary! ✨`, 'success');
+        }
+      };
+
+      addBtn.addEventListener('touchend', handleAddAction);
+      addBtn.addEventListener('click', handleAddAction);
+      btnGroup.appendChild(addBtn);
+
+      phraseRow.appendChild(btnGroup);
+      bubble.appendChild(phraseRow);
+
+      const transDiv = document.createElement('div');
+      transDiv.className = 'popup-trans';
+      transDiv.innerText = popupTransText;
+      bubble.appendChild(transDiv);
+
+      if (itemObject.note && itemObject.note.trim() !== '') {
+        const noteContainer = document.createElement('div');
+        noteContainer.className = 'popup-note-container';
+        const noteContent = document.createElement('div');
+        noteContent.className = 'popup-note-content';
+        noteContent.innerText = itemObject.note.replace(/\s*\/\s*/g, '\n').trim();
+        noteContainer.appendChild(noteContent);
+        bubble.appendChild(noteContainer);
+      }
+
+      if (itemObject.sub_items && Array.isArray(itemObject.sub_items) && itemObject.sub_items.length > 0) {
+        const subContainer = document.createElement('div');
+        subContainer.className = 'popup-subitems-container';
+
+        itemObject.sub_items.forEach(sub => {
+          const dictPhrase = sub.phrase;
+          const subRow = document.createElement('div');
+          subRow.className = 'popup-subitem-row';
+
+          const subMain = document.createElement('div');
+          subMain.className = 'popup-subitem-main';
+
+          let cleanIpa = sub.ipa ? sub.ipa.trim() : '';
+          const isPhraseItem = dictPhrase.includes(' ') || (sub.pos || '').includes('phrase') || (sub.pos || '').includes('idiom');
+          if (isPhraseItem) {
+            cleanIpa = '';
+          } else if (cleanIpa) {
+            if (!cleanIpa.startsWith('/')) cleanIpa = '/' + cleanIpa;
+            if (!cleanIpa.endsWith('/')) cleanIpa = cleanIpa + '/';
+          }
+
+          const subTitle = document.createElement('span');
+          subTitle.className = 'popup-subitem-title';
+
+          const ipaText = cleanIpa ? `<span class="popup-subitem-ipa">${Utils.escapeHtml(cleanIpa)}</span>` : '';
+          const posText = sub.pos ? `<span class="text-pos">[${Utils.escapeHtml(sub.pos)}]</span>` : '';
+          const cefrClass = Utils.getCefrClass(sub.cefr);
+          const cefrText = sub.cefr ? `<span class="cefr-badge ${cefrClass}">${Utils.escapeHtml(sub.cefr)}</span>` : '';
+
+          subTitle.innerHTML = `${Utils.escapeHtml(dictPhrase)} ${ipaText} ${posText} ${cefrText}`.trim();
+
+          const subTrans = document.createElement('span');
+          subTrans.className = 'popup-subitem-trans';
+          subTrans.innerText = sub.trans;
+
+          subMain.appendChild(subTitle);
+          subMain.appendChild(subTrans);
+
+          if (sub.syn && sub.syn.trim() !== '') {
+            const subSyn = document.createElement('span');
+            subSyn.className = 'popup-subitem-syn';
+            subSyn.innerText = `Syn: ${sub.syn}`;
+            subMain.appendChild(subSyn);
+          }
+
+          subRow.appendChild(subMain);
+
+          const subToolbar = document.createElement('div');
+          subToolbar.className = 'popup-subitem-toolbar';
+
+          const subAudioBtn = document.createElement('button');
+          subAudioBtn.className = 'popup-sub-audio-btn';
+          subAudioBtn.innerHTML = '🔊';
+          subAudioBtn.title = 'Play audio';
+          subAudioBtn.onclick = (e) => {
+            AudioManager.playPopupBubbleTTS(dictPhrase, e);
+          };
+          subToolbar.appendChild(subAudioBtn);
+
+          const subDataToSave = {
+            phrase: dictPhrase, ipa: cleanIpa, pos: sub.pos || '', cefr: sub.cefr || '',
+            trans: sub.trans || '', syn: sub.syn || '', context: contextSentence || mainText, source: ''
+          };
+
+          const isSaved = VocabManager.isSaved(dictPhrase, contextSentence || mainText, '');
+          const subStarBtn = document.createElement('button');
+          subStarBtn.className = `popup-star-btn ${isSaved ? 'saved' : ''}`;
+          subStarBtn.innerText = isSaved ? '⭐' : '☆';
+          subStarBtn.title = 'Save word to Vocabulary List';
+          subStarBtn.dataset.phrase = dictPhrase;
+          subStarBtn.dataset.context = contextSentence || mainText;
+          subStarBtn.dataset.source = '';
+
+          subStarBtn.onclick = (e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            VocabManager.toggleItem(subDataToSave, subStarBtn);
+          };
+
+          subToolbar.appendChild(subStarBtn);
+          subRow.appendChild(subToolbar);
+          subContainer.appendChild(subRow);
+        });
+        bubble.appendChild(subContainer);
+      }
+
+      span.appendChild(bubble);
+
+      const showPopup = () => {
+        if (!span.classList.contains('active')) {
+          UI.closeAllPopups();
+          span.classList.add('active');
+
+          requestAnimationFrame(() => {
+            const bubbleRect = bubble.getBoundingClientRect();
+            const spanRect = span.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const padding = 16;
+            let offsetShift = 0;
+
+            if (bubbleRect.left < padding) offsetShift = padding - bubbleRect.left;
+            else if (bubbleRect.right > viewportWidth - padding) offsetShift = (viewportWidth - padding) - bubbleRect.right;
+
+            bubble.style.transform = offsetShift !== 0 ? `translateX(calc(-50% + ${offsetShift}px))` : 'translateX(-50%)';
+
+            const updatedBubbleRect = bubble.getBoundingClientRect();
+            const arrowPos = (spanRect.left + (spanRect.width / 2)) - updatedBubbleRect.left;
+            bubble.style.setProperty('--arrow-left', `${Math.max(14, Math.min(updatedBubbleRect.width - 14, arrowPos))}px`);
+          });
+        }
+      };
+
+      const hidePopup = () => {
+        span.classList.remove('active');
+        bubble.style.left = '50%';
+        bubble.style.transform = 'translateX(-50%)';
+        bubble.style.setProperty('--arrow-left', '50%');
+      };
+
+      span.addEventListener('mouseenter', showPopup);
+      span.addEventListener('mouseleave', (e) => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim() !== '') return;
+        if (!e.relatedTarget || (!e.relatedTarget.closest('.popup-bubble') && e.relatedTarget !== bubble)) hidePopup();
+      });
+      bubble.addEventListener('mouseleave', (e) => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim() !== '') return;
+        if (!e.relatedTarget || (!e.relatedTarget.closest('.interactive-span') && e.relatedTarget !== span)) hidePopup();
+      });
+
+      span.onclick = (e) => {
+        e.stopPropagation();
+        if (span.classList.contains('active')) { 
+          const selection = window.getSelection();
+          if (selection && selection.toString().trim() !== '') return;
+          hidePopup(); 
+          AudioManager.stopAll(); 
+        } else { 
+          showPopup(); 
+        }
+      };
+
+      return span;
+    },
+    runBackgroundPinnedRepair: async () => {
+      if (App.backgroundRepairRunning) return;
+      App.backgroundRepairRunning = true;
+
+      try {
+        await HistoryManager.loadIntoMemory();
+        const entries = HistoryManager.getAllEntries();
+        const pinnedWithErrors = entries.filter(item => item.isPinned && Array.isArray(item.results) && item.results.some(r => !r || r.error || !r.parsed));
+
+        if (pinnedWithErrors.length === 0) {
+          App.backgroundRepairRunning = false;
+          return;
+        }
+
+        const apiKey = App.getApiKey();
+        if (!apiKey) {
+          App.backgroundRepairRunning = false;
+          return;
+        }
+
+        for (const item of pinnedWithErrors) {
+          if (App.isProcessingState) break; // User is operating
+          const chunkStructure = App.parseExactParagraphs(item.originalText, 500);
+          const isShortText = Utils.countWords(item.originalText) <= SHORT_TEXT_THRESHOLD_WORDS;
+
+          let updated = false;
+          for (let i = 0; i < item.results.length; i++) {
+            if (App.isProcessingState) break;
+            const r = item.results[i];
+            if (!r || r.error || !r.parsed) {
+              const fullChunkText = chunkStructure[i] ? chunkStructure[i].map(p => p.text).join("\n\n") : '';
+              try {
+                const parsed = await App.fetchChunkAnalysisWithRetry(fullChunkText, apiKey, isShortText, 2);
+                if (parsed && Array.isArray(parsed)) {
+                  item.results[i] = { parsed };
+                  updated = true;
+                  await HistoryManager.setCachedPayload(item.originalText, item.title, item.isPinned, item.results);
+                }
+              } catch (e) {}
+              // Gentle interval to respect rate limit
+              await new Promise(r => setTimeout(r, 4000));
+            }
+          }
+          if (updated) {
+            await HistoryManager.loadIntoMemory();
+          }
+        }
+      } catch (e) {}
+
+      App.backgroundRepairRunning = false;
+    }
+  };
+
+  /* GLOBAL EVENT LISTENERS */
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.popup-bubble')) return;
+
+    if (!e.target.closest('.interactive-span') && 
+        !e.target.closest('.sentence-play-btn') && 
+        !e.target.closest('.sentence-trans-btn') && 
+        !e.target.closest('.show-all-trans-btn') &&
+        !e.target.closest('.chain-play-btn') &&
+        !e.target.closest('.article-pin-btn') &&
+        !e.target.closest('#vocabModal') && 
+        !e.target.closest('.vocab-open-btn') && 
+        !e.target.closest('#importModal') &&
+        !e.target.closest('#historyModal') && 
+        !e.target.closest('.history-open-btn') && 
+        !e.target.closest('#directSyncModal') && 
+        !e.target.closest('.sync-btn') && 
+        !e.target.closest('#clearVocabConfirmModal') &&
+        !e.target.closest('#deleteVocabConfirmModal') && 
+        !e.target.closest('#deleteHistoryConfirmModal') && 
+        !e.target.closest('#clearHistoryConfirmModal') && 
+        !e.target.closest('#editTitleModal')) {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim() !== '') return;
+      UI.closeAllPopups();
+      AudioManager.stopAll();
+    }
+  });
+
+  const inputTextElem = document.getElementById('inputText');
+  if (inputTextElem) {
+    inputTextElem.addEventListener('input', App.updateInputWordCount);
+  }
+
+  /* INITIALIZATION */
+  (async () => {
+    try {
+      await DB.init();
+      await VocabManager.loadIntoMemory();
+      await HistoryManager.loadIntoMemory();
+      setTimeout(() => {
+        App.runBackgroundPinnedRepair();
+        VocabManager.runBackgroundAnkiAutoRepair();
+      }, 3000);
+    } catch (e) {}
+    App.updateInputWordCount();
+    VocabManager.updateCount();
+    VocabManager.updateQueueButtonState();
+  })();
+</script>
+
+</body>
+</html>
