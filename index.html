@@ -1857,10 +1857,6 @@
       const totalBatches = chunks.length;
 
       for (const chunk of chunks) {
-        if (!document.getElementById('vocabModal').classList.contains('open') && VocabManager.queueRunning && document.getElementById('vocabModal').style.visibility !== 'visible') {
-          // If modal closed and running manually, maybe continue or check
-        }
-
         processedBatches++;
         progressBox.innerText = `Generating details... (Batch ${processedBatches}/${totalBatches})`;
 
@@ -1936,7 +1932,6 @@
           }
         });
 
-        // Only run if 10 or more items are missing details
         if (missingItemsWithIndex.length < 10) {
           VocabManager.backgroundAnkiRunning = false;
           return;
@@ -1949,7 +1944,7 @@
         }
 
         while (true) {
-          if (App.isProcessingState) break; // User is operating
+          if (App.isProcessingState) break;
           await VocabManager.loadIntoMemory();
           list = VocabManager.getSaved();
           const currentMissing = [];
@@ -1959,7 +1954,7 @@
             }
           });
 
-          if (currentMissing.length < 10) break; // Stop when remaining is less than 10
+          if (currentMissing.length < 10) break;
 
           const chunk = currentMissing.slice(0, 10);
           let generatedList = null;
@@ -2007,7 +2002,6 @@
             break;
           }
 
-          // Interval between background batches
           await new Promise(r => setTimeout(r, 6000));
         }
       } catch (e) {}
@@ -3679,6 +3673,14 @@ ${chunkText}`;
       await DB.init();
       await VocabManager.loadIntoMemory();
       await HistoryManager.loadIntoMemory();
+
+      // Ensure input fields are always fresh and blank on startup
+      const titleInput = document.getElementById('inputTitle');
+      const textInput = document.getElementById('inputText');
+      if (titleInput) titleInput.value = '';
+      if (textInput) textInput.value = '';
+      App.updateInputWordCount();
+
       setTimeout(() => {
         App.runBackgroundPinnedRepair();
         VocabManager.runBackgroundAnkiAutoRepair();
