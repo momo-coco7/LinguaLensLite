@@ -83,6 +83,13 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: opacity 0.2s ease;
+    }
+    @media (hover: hover) {
+      h1:hover { opacity: 0.8; }
     }
 
     /* BOTTOM FLOATING STATUS BAR */
@@ -965,7 +972,7 @@
 
 <div class="container">
   <div class="header">
-    <h1>LinguaLens</h1>
+    <h1 onclick="App.resetToHome()" title="Click to reset to home">LinguaLens</h1>
     <div class="header-actions">
       <button class="sync-btn" onclick="UI.openModal('directSyncModal')" title="Sync Data & Settings">🔄 <span class="sync-text-label">Sync</span></button>
       <button class="history-open-btn" onclick="HistoryManager.openModal()" title="History">🕒 <span class="history-text-label">History</span></button>
@@ -1133,8 +1140,8 @@
       <button class="modal-close-btn" onclick="UI.closeModal('historyModal')">&times;</button>
     </div>
     <div class="modal-tab-bar">
-      <button id="tabRecentBtn" class="modal-tab-btn active" onclick="HistoryManager.switchTab('recent')">🕒 Recent</button>
-      <button id="tabSavedBtn" class="modal-tab-btn" onclick="HistoryManager.switchTab('saved')">📌 Saved (Stock)</button>
+      <button id="tabRecentBtn" class="modal-tab-btn" onclick="HistoryManager.switchTab('recent')">🕒 Recent</button>
+      <button id="tabSavedBtn" class="modal-tab-btn active" onclick="HistoryManager.switchTab('saved')">📌 Saved (Stock)</button>
     </div>
     <div class="modal-body">
       <div id="historyToast" class="toast-msg"></div>
@@ -1142,7 +1149,7 @@
     </div>
     <div class="modal-footer">
       <div></div>
-      <button id="clearHistoryBtn" class="action-sm-btn" onclick="HistoryManager.clearCurrentTab()" style="color: #b94b29;">Clear Recent</button>
+      <button id="clearHistoryBtn" class="action-sm-btn" onclick="HistoryManager.clearCurrentTab()" style="color: #b94b29;">Clear All Saved</button>
     </div>
   </div>
 </div>
@@ -1857,10 +1864,6 @@
       const totalBatches = chunks.length;
 
       for (const chunk of chunks) {
-        if (!document.getElementById('vocabModal').classList.contains('open') && VocabManager.queueRunning && document.getElementById('vocabModal').style.visibility !== 'visible') {
-          // If modal closed and running manually, maybe continue or check
-        }
-
         processedBatches++;
         progressBox.innerText = `Generating details... (Batch ${processedBatches}/${totalBatches})`;
 
@@ -1936,7 +1939,6 @@
           }
         });
 
-        // Only run if 10 or more items are missing details
         if (missingItemsWithIndex.length < 10) {
           VocabManager.backgroundAnkiRunning = false;
           return;
@@ -1949,7 +1951,7 @@
         }
 
         while (true) {
-          if (App.isProcessingState) break; // User is operating
+          if (App.isProcessingState) break;
           await VocabManager.loadIntoMemory();
           list = VocabManager.getSaved();
           const currentMissing = [];
@@ -1959,7 +1961,7 @@
             }
           });
 
-          if (currentMissing.length < 10) break; // Stop when remaining is less than 10
+          if (currentMissing.length < 10) break;
 
           const chunk = currentMissing.slice(0, 10);
           let generatedList = null;
@@ -2007,7 +2009,6 @@
             break;
           }
 
-          // Interval between background batches
           await new Promise(r => setTimeout(r, 6000));
         }
       } catch (e) {}
@@ -2025,7 +2026,7 @@ ${JSON.stringify(itemsPayload, null, 2)}
 
 Rules:
 1. phrase: Normalized dictionary headword. Preserve plural forms for plural-only/distinct-meaning nouns (e.g. "premises").
- 2. pos: Exactly one of ["n", "v", "phrasal v", "adj", "adv", "prep", "conj", "phrase", "idiom"].
+2. pos: Exactly one of ["n", "v", "phrasal v", "adj", "adv", "prep", "conj", "phrase", "idiom"].
 3. ipa: Phonetic transcription corresponding precisely to the "phrase" form.
 4. cefr: CEFR level (e.g. B1).
 5. trans: Japanese meaning (comma-separated with Japanese commas '、').
@@ -2184,7 +2185,7 @@ Rules:
 
   /* HISTORY & LIBRARY MANAGER */
   const HistoryManager = {
-    activeTab: 'recent',
+    activeTab: 'saved',
     currentEditingKey: null,
     pendingDeleteKey: null,
     inMemoryCache: [],
@@ -2373,8 +2374,8 @@ Rules:
       const toast = document.getElementById('historyToast');
       if (toast) toast.style.display = 'none';
       await HistoryManager.loadIntoMemory();
-      HistoryManager.activeTab = 'recent';
-      HistoryManager.switchTab('recent');
+      HistoryManager.activeTab = 'saved';
+      HistoryManager.switchTab('saved');
       UI.openModal('historyModal');
     },
     switchTab: tab => {
@@ -2569,12 +2570,27 @@ Rules:
     currentAbortController: null,
     backgroundRepairRunning: false,
 
+    resetToHome: () => {
+      if (App.currentAbortController) App.currentAbortController.abort();
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputText').value = '';
+      document.getElementById('transcriptModeCheckbox').checked = false;
+      document.getElementById('output').innerHTML = '';
+      App.hasActiveContent = false;
+      App.isProcessingState = false;
+      App.isShowAllPreToggled = false;
+      App.setConvertButtonState('normal');
+      UI.updateStatusBar('', false);
+      App.updateInputWordCount();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
     updateInputWordCount: () => {
       const inputTextElem = document.getElementById('inputText');
       const labelElem = document.getElementById('inputTextLabel');
       if (inputTextElem && labelElem) {
         const count = Utils.countWords(inputTextElem.value);
-        labelElem.innerText = `Input Text (${count} words)`;
+        labelElem.innerText = `Input Text (${count.toLocaleString('en-US')} words)`;
       }
     },
 
@@ -2880,7 +2896,7 @@ Rules:
       const prompt = `You are a professional text editor. Clean up the following raw automatic speech recognition (ASR) transcript.
 Rules:
 1. Remove all timestamps (e.g., 12:34).
- 2. Remove bracketed noise tags (e.g., [Music], [Applause]).
+2. Remove bracketed noise tags (e.g., [Music], [Applause]).
 3. Remove conversational fillers (e.g., "uh", "um").
 4. Correct obvious ASR misspellings based on context.
 5. Output ONLY the cleaned plain text.
@@ -3072,9 +3088,9 @@ ${fullText.slice(0, 1500)}`;
 
 【サブアイテム（sub_items）の絶対厳選・抽出ルール】
 1. 【最優先義務】解説（"note"）内に登場・言及されているフレーズ、定型表現、イIdiom、句動詞、コロケーションなどは、例外なく100%すべてサブアイテムとして個別に登録すること。
- 2. 【重要度と難易度に基づく網羅】
-    - 単に「A1/A2だから」という理由だけで基礎単語を一律に除外しないこと。文脈によって意味が取り違えやすい語や、そのチャンクの理解に不可欠な核となる語は積極的に抽出すること。
-    - ただし、冠詞（a, the）や代名詞（it, they）など、単なる文法上の機能語は除外する。
+2. 【重要度と難易度に基づく網羅】
+  - 単に「A1/A2だから」という理由だけで基礎単語を一律に除外しないこと。文脈によって意味が取り違えやすい語や、そのチャンクの理解に不可欠な核となる語は積極的に抽出すること。
+  - ただし、冠詞（a, the）や代名詞（it, they）など、単なる文法上の機能語は除外する。
 3. 【禁止事項】解説内で言及された複合表現や句動詞を勝手にバラバラの単語に分解して登録する行為の厳禁。必ず辞書的ヘッドワードの形（まとまったフレーズまたは原型）で登録すること。
 4. 【最大件数制限】1つのチャンク（"chunk"）に登録できるサブアイテム（"sub_items"）の数は、最重要語句に絞り、最大で3件までとすること。
 
@@ -3087,7 +3103,7 @@ ${fullText.slice(0, 1500)}`;
 【品詞（"pos"）の厳格な9分類ルール（ピリオド絶対禁止）】
 以下の9つのいずれかだけに完全に一致させること。他の表記やピリオド付き（例: n. 等）は絶対に使用しないこと。
 1. "n"（名詞・複合名詞）
- 2. "v"（動詞・動詞句）
+2. "v"（動詞・動詞句）
 3. "phrasal v"（句動詞）
 4. "adj"（形容詞）
 5. "adv"（副詞）
@@ -3098,7 +3114,7 @@ ${fullText.slice(0, 1500)}`;
 
 【訳語と類義語のルール】
 1. 訳語（"trans"）の中に半角カンマ（","）を絶対に入らないこと。複数ある場合は必ずアプリ標準の読点（、）を使用すること。
- 2. 各サブアイテムの類義語を "syn" にカンマ区切りで記載する（ない場合は ""）。
+2. 各サブアイテムの類義語を "syn" にカンマ区切りで記載する（ない場合は ""）。
 `;
 
       const schema = {
@@ -3607,7 +3623,7 @@ ${chunkText}`;
         }
 
         for (const item of pinnedWithErrors) {
-          if (App.isProcessingState) break; // User is operating
+          if (App.isProcessingState) break;
           const chunkStructure = App.parseExactParagraphs(item.originalText, 500);
           const isShortText = Utils.countWords(item.originalText) <= SHORT_TEXT_THRESHOLD_WORDS;
 
@@ -3625,7 +3641,6 @@ ${chunkText}`;
                   await HistoryManager.setCachedPayload(item.originalText, item.title, item.isPinned, item.results);
                 }
               } catch (e) {}
-              // Gentle interval to respect rate limit
               await new Promise(r => setTimeout(r, 4000));
             }
           }
