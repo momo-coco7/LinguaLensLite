@@ -2284,6 +2284,7 @@ Rules:
             payload.createdAt = payload.timestamp || Date.now();
           }
           payload.isPinned = !payload.isPinned;
+          payload.timestamp = Date.now();
           await DB.set(STORE_CACHE, payload);
 
           const pinBtn = document.getElementById('articlePinBtn');
