@@ -2209,23 +2209,14 @@ Rules:
 
           if (!map.has(textKey)) {
             map.set(textKey, item);
-            if (item.key !== textKey) {
-              await DB.delete(STORE_CACHE, item.key);
-              item.key = textKey;
-              await DB.set(STORE_CACHE, item);
-            } else {
-              await DB.set(STORE_CACHE, item);
-            }
           } else {
             const existing = map.get(textKey);
-            const existingCreatedAt = existing.createdAt || existing.timestamp || Date.now();
-            const itemCreatedAt = item.createdAt || item.timestamp || Date.now();
             const merged = {
               ...item,
               ...existing,
               isPinned: Boolean(existing.isPinned || item.isPinned),
               title: (existing.title && existing.title.trim() !== '') ? existing.title : (item.title || ''),
-              createdAt: Math.min(existingCreatedAt, itemCreatedAt),
+              createdAt: existing.createdAt || item.createdAt || existing.timestamp || item.timestamp || Date.now(),
               timestamp: Math.max(existing.timestamp || 0, item.timestamp || 0),
               key: textKey
             };
@@ -2250,7 +2241,6 @@ Rules:
         if (item) {
           if (!item.createdAt) {
             item.createdAt = item.timestamp || Date.now();
-            await DB.set(STORE_CACHE, item);
           }
           return item;
         }
@@ -2440,8 +2430,7 @@ Rules:
         const card = document.createElement('div');
         card.className = 'history-card';
 
-        const displayTime = item.createdAt || item.timestamp;
-        const dateStr = displayTime ? new Date(displayTime).toLocaleString('ja-JP', { 
+        const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('ja-JP', { 
           year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false 
         }) : '';
 
@@ -2842,7 +2831,6 @@ Rules:
             App.renderCachedResults(contentContainer, cachedPayload.results, text, apiKey, isShortText, chunkStructure);
             App.appendBackToTopButton(contentContainer);
 
-            await HistoryManager.setCachedPayload(text, activeTitle, cachedPayload.isPinned, cachedPayload.results);
             App.setConvertButtonState('ready_regenerate');
             return;
           }
