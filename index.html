@@ -1141,7 +1141,7 @@
     </div>
     <div class="modal-tab-bar">
       <button id="tabRecentBtn" class="modal-tab-btn" onclick="HistoryManager.switchTab('recent')">🕒 Recent</button>
-      <button id="tabSavedBtn" class="modal-tab-btn active" onclick="HistoryManager.switchTab('saved')">📌 Saved (Stock)</button>
+      <button id="tabSavedBtn" class="modal-tab-btn active" onclick="HistoryManager.switchTab('saved')">📌 Saved (0)</button>
     </div>
     <div class="modal-body">
       <div id="historyToast" class="toast-msg"></div>
@@ -1214,7 +1214,7 @@
   const DB_VERSION = 2;
   const STORE_VOCAB = 'vocab';
   const STORE_CACHE = 'cache';
-  const MAX_RECENT_COUNT = 20;
+  const MAX_RECENT_COUNT = 50;
 
   /* INDEXEDDB WRAPPER */
   const DB = {
@@ -2190,21 +2190,42 @@ Rules:
     pendingDeleteKey: null,
     inMemoryCache: [],
 
+    updateTabCounts: () => {
+      const savedCount = HistoryManager.getAllEntries().filter(item => Boolean(item.isPinned)).length;
+      const savedTabBtn = document.getElementById('tabSavedBtn');
+      if (savedTabBtn) {
+        savedTabBtn.innerText = `📌 Saved (${savedCount})`;
+      }
+    },
     loadIntoMemory: async () => {
       try {
         let rawList = await DB.getAll(STORE_CACHE);
         const map = new Map();
         for (const item of rawList) {
           const textKey = item.originalText ? Utils.getCacheKey(item.originalText) : item.key;
+          if (!item.createdAt) {
+            item.createdAt = item.timestamp || Date.now();
+          }
+
           if (!map.has(textKey)) {
             map.set(textKey, item);
+            if (item.key !== textKey) {
+              await DB.delete(STORE_CACHE, item.key);
+              item.key = textKey;
+              await DB.set(STORE_CACHE, item);
+            } else {
+              await DB.set(STORE_CACHE, item);
+            }
           } else {
             const existing = map.get(textKey);
+            const existingCreatedAt = existing.createdAt || existing.timestamp || Date.now();
+            const itemCreatedAt = item.createdAt || item.timestamp || Date.now();
             const merged = {
               ...item,
               ...existing,
               isPinned: Boolean(existing.isPinned || item.isPinned),
               title: (existing.title && existing.title.trim() !== '') ? existing.title : (item.title || ''),
+              createdAt: Math.min(existingCreatedAt, itemCreatedAt),
               timestamp: Math.max(existing.timestamp || 0, item.timestamp || 0),
               key: textKey
             };
@@ -2219,6 +2240,7 @@ Rules:
           }
         }
         HistoryManager.inMemoryCache = Array.from(map.values());
+        HistoryManager.updateTabCounts();
       } catch (e) { HistoryManager.inMemoryCache = []; }
     },
     getCachedPayload: async (fullText) => {
@@ -2226,8 +2248,10 @@ Rules:
         const key = Utils.getCacheKey(fullText);
         let item = await DB.get(STORE_CACHE, key);
         if (item) {
-          item.timestamp = Date.now();
-          await DB.set(STORE_CACHE, item);
+          if (!item.createdAt) {
+            item.createdAt = item.timestamp || Date.now();
+            await DB.set(STORE_CACHE, item);
+          }
           return item;
         }
         return null;
@@ -2239,15 +2263,23 @@ Rules:
         let existing = await DB.get(STORE_CACHE, key);
         let finalPinned = Boolean(isPinned);
         let finalTitle = titleText || "";
+        const now = Date.now();
+        let finalCreatedAt = now;
 
         if (existing) {
           if (typeof existing.isPinned === 'boolean') finalPinned = existing.isPinned;
           if (!finalTitle && existing.title) finalTitle = existing.title;
+          finalCreatedAt = existing.createdAt || existing.timestamp || now;
         }
 
         const payload = {
-          key: key, timestamp: Date.now(), title: finalTitle,
-          originalText: fullText, isPinned: finalPinned, results: resultsArray
+          key: key,
+          createdAt: finalCreatedAt,
+          timestamp: now,
+          title: finalTitle,
+          originalText: fullText,
+          isPinned: finalPinned,
+          results: resultsArray
         };
         await DB.set(STORE_CACHE, payload);
         await HistoryManager.cleanOldRecent();
@@ -2258,8 +2290,10 @@ Rules:
       try {
         let payload = await DB.get(STORE_CACHE, key);
         if (payload) {
+          if (!payload.createdAt) {
+            payload.createdAt = payload.timestamp || Date.now();
+          }
           payload.isPinned = !payload.isPinned;
-          payload.timestamp = Date.now();
           await DB.set(STORE_CACHE, payload);
 
           const pinBtn = document.getElementById('articlePinBtn');
@@ -2290,9 +2324,11 @@ Rules:
         let payload = await DB.get(STORE_CACHE, HistoryManager.currentEditingKey);
         if (payload) {
           const newTitle = document.getElementById('editTitleInput')?.value.trim() || '';
+          if (!payload.createdAt) {
+            payload.createdAt = payload.timestamp || Date.now();
+          }
 
           payload.title = newTitle;
-          payload.timestamp = Date.now();
           await DB.set(STORE_CACHE, payload);
 
           const activePinBtn = document.getElementById('articlePinBtn');
@@ -2311,7 +2347,7 @@ Rules:
       HistoryManager.currentEditingKey = null;
     },
     getAllEntries: () => {
-      return HistoryManager.inMemoryCache.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      return [...HistoryManager.inMemoryCache].sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
     },
     cleanOldRecent: async () => {
       try {
@@ -2321,6 +2357,7 @@ Rules:
           for (let i = MAX_RECENT_COUNT; i < unpinned.length; i++) {
             await DB.delete(STORE_CACHE, unpinned[i].key);
           }
+          await HistoryManager.loadIntoMemory();
         }
       } catch (e) {}
     },
@@ -2388,6 +2425,7 @@ Rules:
       HistoryManager.renderModalList();
     },
     renderModalList: () => {
+      HistoryManager.updateTabCounts();
       const filtered = HistoryManager.getAllEntries().filter(item => HistoryManager.activeTab === 'saved' ? item.isPinned : !item.isPinned);
       const body = document.getElementById('historyListBody');
 
@@ -2402,7 +2440,8 @@ Rules:
         const card = document.createElement('div');
         card.className = 'history-card';
 
-        const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('ja-JP', { 
+        const displayTime = item.createdAt || item.timestamp;
+        const dateStr = displayTime ? new Date(displayTime).toLocaleString('ja-JP', { 
           year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false 
         }) : '';
 
@@ -2536,24 +2575,16 @@ Rules:
       for (const fileItem of fileHistoryList) {
         if (!fileItem.originalText) continue;
         const key = Utils.getCacheKey(fileItem.originalText);
-        fileItem.key = key;
 
         let localItem = await DB.get(STORE_CACHE, key);
         if (!localItem) {
-          await DB.set(STORE_CACHE, fileItem);
+          const newItem = {
+            ...fileItem,
+            key: key,
+            createdAt: fileItem.createdAt || fileItem.timestamp || Date.now()
+          };
+          await DB.set(STORE_CACHE, newItem);
           addedCount++;
-        } else {
-          try {
-            const mergedItem = {
-              ...localItem,
-              ...fileItem,
-              key: key,
-              isPinned: Boolean(localItem.isPinned || fileItem.isPinned),
-              title: (localItem.title && localItem.title.trim() !== '') ? localItem.title : (fileItem.title || ''),
-              timestamp: Math.max(localItem.timestamp || 0, fileItem.timestamp || 0)
-            };
-            await DB.set(STORE_CACHE, mergedItem);
-          } catch (e) {}
         }
       }
 
@@ -3087,7 +3118,7 @@ ${fullText.slice(0, 1500)}`;
 - 【長大ブロックの禁止】1つのチャンクが文全体のように長大になりすぎず、前置詞句、副詞節、主語・動詞・目的語などの意味上の塊（通常2〜6単語程度の自然なフレーズ単位）ごとに分割すること。
 
 【サブアイテム（sub_items）の絶対厳選・抽出ルール】
-1. 【最優先義務】解説（"note"）内に登場・言及されているフレーズ、定型表現、イIdiom、句動詞、コロケーションなどは、例外なく100%すべてサブアイテムとして個別に登録すること。
+1. 【最優先義務】解説（"note"）内に登場・言及されているフレーズ、定型表現、イディオム、句動詞、コロケーションなどは、例外なく100%すべてサブアイテムとして個別に登録すること。
 2. 【重要度と難易度に基づく網羅】
   - 単に「A1/A2だから」という理由だけで基礎単語を一律に除外しないこと。文脈によって意味が取り違えやすい語や、そのチャンクの理解に不可欠な核となる語は積極的に抽出すること。
   - ただし、冠詞（a, the）や代名詞（it, they）など、単なる文法上の機能語は除外する。
@@ -3110,7 +3141,7 @@ ${fullText.slice(0, 1500)}`;
 6. "prep"（前置詞）
 7. "conj"（接続詞）
 8. "phrase"（フレーズ・名詞句コロケーション）
-9. "idiom"（イIdiom）
+9. "idiom"（イディオム）
 
 【訳語と類義語のルール】
 1. 訳語（"trans"）の中に半角カンマ（","）を絶対に入らないこと。複数ある場合は必ずアプリ標準の読点（、）を使用すること。
