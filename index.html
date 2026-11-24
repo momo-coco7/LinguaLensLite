@@ -1197,7 +1197,11 @@
       <button class="modal-close-btn" onclick="UI.closeModal('editTitleModal')">&times;</button>
     </div>
     <div class="modal-body" style="padding: 18px 16px;">
-      <input type="text" id="editTitleInput" class="input-title-field" placeholder="Enter new title..." style="margin-bottom: 0;">
+      <div style="display: flex; gap: 6px; align-items: stretch;">
+        <input type="text" id="editTitleInput" class="input-title-field" placeholder="Enter new title..." style="margin-bottom: 0; flex: 1;">
+        <button id="autoGenerateTitleBtn" class="action-sm-btn" onclick="HistoryManager.generateEditTitle()" title="Auto-generate title" style="padding: 0 10px; font-size: 0.95rem; flex-shrink: 0;">🪄</button>
+      </div>
+      <div id="editTitleErrorMsg" style="display: none; margin-top: 8px; font-size: 0.8rem; font-weight: 600; color: #b94b29; line-height: 1.4;"></div>
     </div>
     <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
       <button class="action-sm-btn" onclick="UI.closeModal('editTitleModal')">Cancel</button>
@@ -2303,11 +2307,84 @@ Rules:
         if (payload) {
           HistoryManager.currentEditingKey = key;
           const inputElem = document.getElementById('editTitleInput');
-          if (inputElem) inputElem.value = payload.title || '';
+          const genBtn = document.getElementById('autoGenerateTitleBtn');
+          const errElem = document.getElementById('editTitleErrorMsg');
+          if (inputElem) {
+            inputElem.value = payload.title || '';
+            inputElem.disabled = false;
+          }
+          if (genBtn) {
+            genBtn.disabled = false;
+            genBtn.innerText = '🪄';
+          }
+          if (errElem) {
+            errElem.style.display = 'none';
+            errElem.innerText = '';
+          }
           UI.openModal('editTitleModal');
           setTimeout(() => { inputElem?.focus(); }, 100);
         }
       } catch (e) {}
+    },
+    generateEditTitle: async () => {
+      if (!HistoryManager.currentEditingKey) return;
+      const inputElem = document.getElementById('editTitleInput');
+      const genBtn = document.getElementById('autoGenerateTitleBtn');
+      const errElem = document.getElementById('editTitleErrorMsg');
+
+      if (errElem) {
+        errElem.style.display = 'none';
+        errElem.innerText = '';
+      }
+
+      const apiKey = App.getApiKey();
+      if (!apiKey) {
+        if (errElem) {
+          errElem.innerText = '⚠️ Please set your Gemini API key in Data Sync & Settings.';
+          errElem.style.display = 'block';
+        }
+        return;
+      }
+
+      let payload = null;
+      try {
+        payload = await DB.get(STORE_CACHE, HistoryManager.currentEditingKey);
+      } catch (e) {}
+
+      if (!payload || !payload.originalText) {
+        if (errElem) {
+          errElem.innerText = '⚠️ Failed to generate title.';
+          errElem.style.display = 'block';
+        }
+        return;
+      }
+
+      if (inputElem) inputElem.disabled = true;
+      if (genBtn) {
+        genBtn.disabled = true;
+        genBtn.innerText = '⏳';
+      }
+
+      try {
+        const generatedTitle = await App.fetchTitle(payload.originalText, apiKey);
+        if (generatedTitle) {
+          if (inputElem) inputElem.value = generatedTitle;
+        } else if (errElem) {
+          errElem.innerText = '⚠️ Failed to generate title.';
+          errElem.style.display = 'block';
+        }
+      } catch (e) {
+        if (errElem) {
+          errElem.innerText = '⚠️ Failed to generate title.';
+          errElem.style.display = 'block';
+        }
+      } finally {
+        if (inputElem) inputElem.disabled = false;
+        if (genBtn) {
+          genBtn.disabled = false;
+          genBtn.innerText = '🪄';
+        }
+      }
     },
     executeEditTitle: async () => {
       if (!HistoryManager.currentEditingKey) return;
@@ -2949,12 +3026,13 @@ ${fullText.slice(0, 1500)}`;
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
       try {
-        const response = await fetch(url, {
+        const fetchOptions = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } }),
-          signal
-        });
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } })
+        };
+        if (signal) fetchOptions.signal = signal;
+        const response = await fetch(url, fetchOptions);
         if (response.ok) {
           const data = await response.json();
           return data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '') || "";
